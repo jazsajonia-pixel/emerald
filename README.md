@@ -15,6 +15,7 @@ stay compatible with Obsidian and other editors.
 - AI (optional, bring your own key): [`docs/AI.md`](docs/AI.md)
 - GitHub sync (optional): [`docs/SYNC.md`](docs/SYNC.md)
 - Release, signing, permissions, upgrades: [`docs/RELEASE.md`](docs/RELEASE.md)
+- Use your vault from ChatGPT, Claude, Perplexity or Manus (optional server on Vercel): [`mcp-server/README.md`](mcp-server/README.md)
 - Testing levels and manual device checklist: [`docs/TESTING.md`](docs/TESTING.md)
 
 ## Project facts
