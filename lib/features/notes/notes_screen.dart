@@ -4,8 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/ui/state_views.dart';
 import '../../core/vault/vault_path.dart';
 import '../../data/vault_storage.dart';
+import '../search/index_controller.dart';
+import '../search/search_screen.dart';
 import '../vault/vault_controller.dart';
-import 'note_editor_screen.dart';
+import 'note_navigation.dart';
+import 'orphans_screen.dart';
 
 /// Vault browser: folders and Markdown notes of the current folder.
 class NotesScreen extends ConsumerStatefulWidget {
@@ -21,11 +24,7 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
   void _snack(String msg) =>
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
 
-  Future<void> _openNote(String path) async {
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => NoteEditorScreen(path: path)),
-    );
-  }
+  Future<void> _openNote(String path) => openNote(context, path);
 
   Future<String?> _askName(String title, String label) {
     final ctrl = TextEditingController();
@@ -60,6 +59,9 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
       final doc = await ref
           .read(noteRepositoryProvider)
           .create(s.vault, _dir, title);
+      ref
+          .read(indexControllerProvider.notifier)
+          .updateNote(doc.path, doc.text, doc.stamp);
       ref
           .read(vaultControllerProvider.notifier)
           .noteWritten(doc.path, doc.stamp);
@@ -113,6 +115,13 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
           actions: [
             if (state is VaultReady) ...[
               IconButton(
+                tooltip: 'Search',
+                icon: const Icon(Icons.search),
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(builder: (_) => const SearchScreen()),
+                ),
+              ),
+              IconButton(
                 tooltip: 'Rescan vault',
                 icon: const Icon(Icons.refresh),
                 onPressed: state.scanning ? null : controller.rescan,
@@ -120,9 +129,24 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
               PopupMenuButton<String>(
                 onSelected: (v) {
                   if (v == 'folder') _newFolder(state);
+                  if (v == 'orphans') {
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const OrphansScreen(),
+                      ),
+                    );
+                  }
+                  if (v == 'reindex') {
+                    ref.read(indexControllerProvider.notifier).rebuild();
+                  }
                 },
                 itemBuilder: (_) => const [
                   PopupMenuItem(value: 'folder', child: Text('New folder')),
+                  PopupMenuItem(
+                    value: 'orphans',
+                    child: Text('Unlinked notes'),
+                  ),
+                  PopupMenuItem(value: 'reindex', child: Text('Rebuild index')),
                 ],
               ),
             ],

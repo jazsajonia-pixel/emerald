@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/ui/state_views.dart';
 import '../../data/vault_storage.dart';
+import '../links/links_sheet.dart';
+import '../links/preview_links.dart';
+import '../search/index_controller.dart';
 import '../vault/vault_controller.dart';
 import 'markdown_preview.dart';
 import 'note_codec.dart';
+import 'note_navigation.dart';
 import 'note_repository.dart';
 
 enum _ConflictChoice { saveCopy, reload, overwrite }
@@ -144,6 +149,9 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen>
   }
 
   void _applySaved(NoteDocument saved) {
+    ref
+        .read(indexControllerProvider.notifier)
+        .updateNote(saved.path, saved.text, saved.stamp);
     ref
         .read(vaultControllerProvider.notifier)
         .noteWritten(saved.path, saved.stamp);
@@ -287,6 +295,59 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen>
     if (mounted) Navigator.of(context).pop();
   }
 
+  void _showLinks() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => LinksSheet(
+        path: _path,
+        onOpen: (p) {
+          Navigator.pop(ctx);
+          openNote(context, p);
+        },
+      ),
+    );
+  }
+
+  void _onPreviewLink(String text, String? href) {
+    if (href == null) return;
+    if (href.startsWith(PreviewLinks.noteScheme)) {
+      openNote(
+        context,
+        Uri.decodeComponent(href.substring(PreviewLinks.noteScheme.length)),
+      );
+      return;
+    }
+    if (href.startsWith(PreviewLinks.brokenScheme)) {
+      _snack(
+        'No note named "${Uri.decodeComponent(href.substring(PreviewLinks.brokenScheme.length))}" exists.',
+      );
+      return;
+    }
+    // External link: Emerald does not open the network on its own.
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('External link'),
+        content: SelectableText(href),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Close'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: href));
+              Navigator.pop(ctx);
+              _snack('Link copied');
+            },
+            child: const Text('Copy link'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _showHistory() async {
     final vault = _vault;
     if (vault == null) return;
@@ -364,11 +425,17 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen>
                   onPressed: _dirty && !_saving ? _save : null,
                 ),
               PopupMenuButton<String>(
+                tooltip: 'Note actions',
                 onSelected: (v) {
+                  if (v == 'links') _showLinks();
                   if (v == 'history') _showHistory();
                   if (v == 'reload') _checkExternalChange();
                 },
                 itemBuilder: (_) => const [
+                  PopupMenuItem(
+                    value: 'links',
+                    child: Text('Links and backlinks'),
+                  ),
                   PopupMenuItem(
                     value: 'history',
                     child: Text('Previous versions'),
@@ -419,8 +486,12 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen>
     ];
     final content = _preview || doc.readOnly
         ? MarkdownPreview(
-            text: _text.text,
-            onTapLink: (t, href) => _snack('Link: ${href ?? t}'),
+            text: PreviewLinks.prepare(
+              _text.text,
+              _path,
+              ref.watch(indexControllerProvider).index,
+            ),
+            onTapLink: _onPreviewLink,
           )
         : TextField(
             key: const Key('note-editor'),

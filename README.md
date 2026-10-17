@@ -10,6 +10,7 @@ stay compatible with Obsidian and other editors.
 - Architecture: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
 - Status of each phase: [`docs/STATUS.md`](docs/STATUS.md)
 - Vault storage, safety and limitations: [`docs/STORAGE.md`](docs/STORAGE.md)
+- Links, backlinks and search: [`docs/LINKS_AND_SEARCH.md`](docs/LINKS_AND_SEARCH.md)
 - Testing levels and manual device checklist: [`docs/TESTING.md`](docs/TESTING.md)
 
 ## Project facts
