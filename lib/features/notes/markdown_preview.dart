@@ -11,14 +11,17 @@ class MarkdownPreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Markdown(
-      data: text,
-      selectable: true,
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
-      onTapLink: (t, href, _) => onTapLink?.call(t, href),
-      imageBuilder: (uri, title, alt) => Chip(
-        avatar: const Icon(Icons.image_not_supported_outlined, size: 18),
-        label: Text(alt?.isNotEmpty == true ? alt! : 'Image not shown'),
+    // SelectionArea instead of `selectable: true`: tappable links are more
+    // reliable with plain rich text inside a selection area.
+    return SelectionArea(
+      child: Markdown(
+        data: text,
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+        onTapLink: (t, href, _) => onTapLink?.call(t, href),
+        imageBuilder: (uri, title, alt) => Chip(
+          avatar: const Icon(Icons.image_not_supported_outlined, size: 18),
+          label: Text(alt?.isNotEmpty == true ? alt! : 'Image not shown'),
+        ),
       ),
     );
   }
