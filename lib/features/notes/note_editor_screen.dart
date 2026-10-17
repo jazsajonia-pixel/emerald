@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/ui/state_views.dart';
 import '../../data/vault_storage.dart';
+import '../graph/graph_screen.dart';
 import '../links/links_sheet.dart';
 import '../links/preview_links.dart';
 import '../search/index_controller.dart';
@@ -428,6 +429,13 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen>
                 tooltip: 'Note actions',
                 onSelected: (v) {
                   if (v == 'links') _showLinks();
+                  if (v == 'graph') {
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => GraphScreen(center: _path),
+                      ),
+                    );
+                  }
                   if (v == 'history') _showHistory();
                   if (v == 'reload') _checkExternalChange();
                 },
@@ -436,6 +444,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen>
                     value: 'links',
                     child: Text('Links and backlinks'),
                   ),
+                  PopupMenuItem(value: 'graph', child: Text('Local graph')),
                   PopupMenuItem(
                     value: 'history',
                     child: Text('Previous versions'),

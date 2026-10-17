@@ -33,5 +33,7 @@ Install the APK from the latest successful run, then:
 11. Brain → search icon → search a word from a note; it is found.
 12. Edit a note in another app, return, tap **Rescan**; search finds the new
     text.
+13. Graph tab: dots and lines appear; pinch/drag work; tapping a dot opens
+    its note; long-press shows its local graph.
 
 Please report the Android version and device model with any failure.
