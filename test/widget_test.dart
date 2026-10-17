@@ -52,12 +52,14 @@ void main() {
     }
   });
 
-  testWidgets('incomplete features are labelled, not faked', (tester) async {
+  testWidgets('AI is clearly optional and off until configured', (
+    tester,
+  ) async {
     await _pumpAt(tester, phone);
     await tester.tap(find.text('AI Hub'));
     await tester.pumpAndSettle();
-    expect(find.byType(NotYetAvailable), findsOneWidget);
-    expect(find.textContaining('not available yet'), findsOneWidget);
+    expect(find.text('AI is optional and off'), findsOneWidget);
+    expect(find.text('Set up a provider'), findsOneWidget);
   });
 
   testWidgets('home quick action navigates to Graph', (tester) async {

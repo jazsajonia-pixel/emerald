@@ -100,12 +100,14 @@ class VaultController extends Notifier<VaultState> {
     state = const VaultLoading();
     try {
       final v = await _storage.restoreVault();
+      if (!ref.mounted) return;
       if (v == null) {
         state = const VaultNone();
         return;
       }
       await _scan(v);
     } on VaultException catch (e) {
+      if (!ref.mounted) return;
       state = e.code == VaultErrorCode.permissionDenied
           ? const VaultAccessLost()
           : VaultFailure(describeVaultError(e));
@@ -116,6 +118,7 @@ class VaultController extends Notifier<VaultState> {
     final previous = state;
     try {
       final v = await _storage.pickVault();
+      if (!ref.mounted) return;
       if (v == null) {
         state = previous is VaultLoading ? const VaultNone() : previous;
         return;
@@ -123,6 +126,7 @@ class VaultController extends Notifier<VaultState> {
       state = const VaultLoading();
       await _scan(v);
     } on VaultException catch (e) {
+      if (!ref.mounted) return;
       state = e.code == VaultErrorCode.permissionDenied
           ? const VaultAccessLost()
           : VaultFailure(describeVaultError(e));
@@ -139,8 +143,10 @@ class VaultController extends Notifier<VaultState> {
   Future<void> _scan(VaultHandle v) async {
     try {
       final entries = await _storage.listTree(v);
+      if (!ref.mounted) return;
       state = VaultReady(v, entries);
     } on VaultException catch (e) {
+      if (!ref.mounted) return;
       state = e.code == VaultErrorCode.permissionDenied
           ? const VaultAccessLost()
           : VaultFailure(describeVaultError(e));
@@ -151,6 +157,7 @@ class VaultController extends Notifier<VaultState> {
   Future<void> forget() async {
     final s = state;
     if (s is VaultReady) await _storage.forgetVault(s.vault);
+    if (!ref.mounted) return;
     state = const VaultNone();
   }
 

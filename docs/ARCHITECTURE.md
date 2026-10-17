@@ -34,8 +34,11 @@ android/app/src/main/kotlin/...   Small Kotlin platform channel for Storage Acce
 - **Hashing:** `crypto` (SHA-256 for conflict detection).
 - **Graph:** explicit Markdown/wiki links first. AI-inferred links, if ever
   added, are a separate, visually distinct layer.
-- **AI:** provider-neutral interface; each provider lives in its own adapter.
-  AI-proposed edits are previewed and require approval.
+- **AI:** provider-neutral interface; each provider lives in its own adapter
+  (`http` package, no vendor SDK). Keys in `flutter_secure_storage`. The model
+  only gets narrow vault-scoped tools; writes are proposals that require
+  approval and go through the conflict-checked repository. See
+  [`AI.md`](AI.md).
 - **Dependencies:** each one must be maintained, Android-compatible, and have a
   clear purpose. No cloud backend, vector DB, or agent framework without a
   tested requirement.

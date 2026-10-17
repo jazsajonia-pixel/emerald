@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../ai/ai_config.dart';
+import '../ai/ai_settings_screen.dart';
 import '../vault/vault_controller.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -33,6 +35,7 @@ class SettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final vault = ref.watch(vaultControllerProvider);
+    final ai = ref.watch(aiConfigProvider);
     final controller = ref.read(vaultControllerProvider.notifier);
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
@@ -56,11 +59,16 @@ class SettingsScreen extends ConsumerWidget {
               subtitle: const Text('Releases access; files are untouched'),
               onTap: () => _forget(context, ref),
             ),
-          const ListTile(
-            leading: Icon(Icons.key_outlined),
-            title: Text('AI providers'),
-            subtitle: Text('Not available yet (Phase 5)'),
-            enabled: false,
+          ListTile(
+            leading: const Icon(Icons.key_outlined),
+            title: const Text('AI provider'),
+            subtitle: Text(
+              ai.ready ? '${ai.info?.name} · ${ai.model}' : 'Off (optional)',
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(builder: (_) => const AiSettingsScreen()),
+            ),
           ),
           const Divider(),
           const ListTile(
