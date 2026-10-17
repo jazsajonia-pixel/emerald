@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:emerald/data/memory_vault_storage.dart';
@@ -88,6 +89,21 @@ void main() {
         )!.kind,
         ProposalKind.create,
       );
+    });
+
+    test('parses the file the MCP server writes (shared fixture)', () {
+      // Same fixture as mcp-server/test/e2e.test.ts asserts the server
+      // output against.
+      final f = File('mcp-server/test/fixtures/proposal-v1.json');
+      final p = RemoteProposal.parse(f.readAsBytesSync())!;
+      expect(p.id, '20261018T091500Z-00000000');
+      expect(p.kind, ProposalKind.update);
+      expect(p.path, 'Projects/Plan.md');
+      expect(p.baseSha, '5c2c2d0f1c3c5b6b3e0e6f6e1e8c1d0b5a8f6f9e');
+      expect(p.content, '# Plan\n\nSee [[Garden]].\n\n## Next\n- water\n');
+      expect(p.summary, 'Add a Next section');
+      expect(p.createdAt, DateTime.utc(2026, 10, 18, 9, 15));
+      expect(p.client, isNull);
     });
 
     test('rejects unsafe paths, wrong format and missing base', () {

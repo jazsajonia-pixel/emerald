@@ -3,6 +3,7 @@
  * + MCP SDK v2) over Streamable HTTP; GitHub is faked in memory.
  */
 import { test, beforeEach } from 'node:test';
+import { readFileSync } from 'node:fs';
 import assert from 'node:assert/strict';
 import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
 import { buildHandler } from '../src/handler.js';
@@ -165,6 +166,12 @@ test('propose_note_change records a proposal and never edits the note', async ()
     client: null,
   });
   assert.deepEqual(gh.commits, [{ path: file, message: 'Propose update of Projects/Plan.md (Emerald MCP)' }]);
+
+  // Contract with the app (test/sync/remote_proposals_test.dart reads the
+  // same fixture): identical file apart from the note-specific base SHA.
+  const fixture = JSON.parse(readFileSync(new URL('../../test/fixtures/proposal-v1.json', import.meta.url), 'utf8'));
+  assert.deepEqual({ ...saved, baseSha: fixture.baseSha }, fixture);
+  assert.deepEqual(Object.keys(saved), Object.keys(fixture));
 
   const created = await call(client, 'propose_note_change', {
     path: 'Ideas/New idea.md',
