@@ -12,6 +12,7 @@ stay compatible with Obsidian and other editors.
 - Vault storage, safety and limitations: [`docs/STORAGE.md`](docs/STORAGE.md)
 - Links, backlinks and search: [`docs/LINKS_AND_SEARCH.md`](docs/LINKS_AND_SEARCH.md)
 - Graph: [`docs/GRAPH.md`](docs/GRAPH.md)
+- AI (optional, bring your own key): [`docs/AI.md`](docs/AI.md)
 - Testing levels and manual device checklist: [`docs/TESTING.md`](docs/TESTING.md)
 
 ## Project facts
@@ -70,4 +71,7 @@ flutter build apk --release
 
 - Never commit API keys, tokens, signing keys, or personal notes.
 - Emerald does not send vault content anywhere unless you explicitly configure
-  and invoke a remote AI integration (planned for a later phase).
+  a remote AI provider with your own key and send a question. See
+  [`docs/AI.md`](docs/AI.md) for exactly what is sent and how keys are stored.
+- AI can only *propose* note changes; nothing is written until you approve it,
+  and there is no AI delete tool.

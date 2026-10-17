@@ -106,7 +106,7 @@ class IndexController extends Notifier<IndexState> {
       final e = toRead[i];
       try {
         final c = await storage.readFile(s.vault, e.path);
-        if (gen != _generation) return; // superseded by a newer sync
+        if (!ref.mounted || gen != _generation) return; // superseded
         _cache[e.path] = IndexedNote(
           path: e.path,
           text: NoteCodec.decode(c.bytes).text,
@@ -115,7 +115,7 @@ class IndexController extends Notifier<IndexState> {
         );
         _unreadable.remove(e.path);
       } on VaultException catch (err) {
-        if (gen != _generation) return;
+        if (!ref.mounted || gen != _generation) return;
         if (err.code == VaultErrorCode.permissionDenied) {
           state = IndexState(_build());
           return;
@@ -132,7 +132,7 @@ class IndexController extends Notifier<IndexState> {
         );
       }
     }
-    if (gen != _generation) return;
+    if (!ref.mounted || gen != _generation) return;
     state = IndexState(_build());
   }
 }

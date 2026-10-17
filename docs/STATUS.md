@@ -6,8 +6,8 @@
 | 1 — Shell and navigation | Done | Widget-tested (PR #2); launch verified on emulator from Phase 2 CI |
 | 2 — Safe Markdown vault access | Done (CI + emulator) | PR #3. Real-folder picker flow still needs the manual device checklist |
 | 3 — Links, backlinks, search | Done (CI + emulator launch) | PR #4. In-memory index instead of SQLite (see docs/LINKS_AND_SEARCH.md) |
-| 4 — Interactive graph | In progress | Custom force layout, global/local, highlight, filters |
-| 5 — AI foundation and safe tools | Not started | |
+| 4 — Interactive graph | Done (CI + emulator launch) | PR #5. Custom force layout, global/local, highlight, filters |
+| 5 — AI foundation and safe tools | In progress | Gemini adapter, vault-scoped tools, approval flow (docs/AI.md). Real API not exercised |
 | 6 — Additional providers / agents | Not started | |
 | 7 — Backup and hybrid sync | Not started | |
 | 8 — Release hardening | Not started | |

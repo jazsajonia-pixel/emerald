@@ -36,4 +36,17 @@ Install the APK from the latest successful run, then:
 13. Graph tab: dots and lines appear; pinch/drag work; tapping a dot opens
     its note; long-press shows its local graph.
 
+AI (optional; needs your own Gemini key — the free tier is enough):
+
+14. Settings → **AI provider** → paste key → **Test connection** → models are
+    listed. A wrong key shows "The API key was rejected…".
+15. **Save** → the key field is cleared and the key is never shown again.
+16. AI Hub → ask "What notes mention X?" → consent dialog → **I understand** →
+    an answer appears with "Searched…/Read…" lines and "Sent to …" banner.
+17. Ask "Add a summary line to note Test" → a proposal card with a diff. Tap
+    **Reject** → the file is unchanged. Repeat and **Approve & save** → the
+    change is in the file (check in another app); ⋮ → Previous versions shows
+    the pre-AI version.
+18. Turn on airplane mode and ask again → a network error, notes unchanged.
+
 Please report the Android version and device model with any failure.
