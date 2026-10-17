@@ -1,6 +1,7 @@
 import 'package:emerald/app/app.dart';
 import 'package:emerald/data/memory_vault_storage.dart';
 import 'package:emerald/features/ai/ai_config.dart';
+import 'package:emerald/features/sync/sync_controller.dart';
 import 'package:emerald/features/vault/vault_controller.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,6 +14,7 @@ Future<void> pumpEmerald(
   double textScale = 1.0,
   SecretStore? secrets,
   AiProviderFactory? aiFactory,
+  GitHubClientFactory? gitHubFactory,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1.0;
@@ -26,6 +28,8 @@ Future<void> pumpEmerald(
         secretStoreProvider.overrideWithValue(secrets ?? MemorySecretStore()),
         if (aiFactory != null)
           aiProviderFactoryProvider.overrideWithValue(aiFactory),
+        if (gitHubFactory != null)
+          gitHubClientFactoryProvider.overrideWithValue(gitHubFactory),
       ],
       child: const EmeraldApp(),
     ),

@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../ai/ai_config.dart';
 import '../ai/ai_settings_screen.dart';
+import '../sync/sync_controller.dart';
+import '../sync/sync_screen.dart';
 import '../vault/vault_controller.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -36,6 +38,7 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final vault = ref.watch(vaultControllerProvider);
     final ai = ref.watch(aiConfigProvider);
+    final sync = ref.watch(syncControllerProvider);
     final controller = ref.read(vaultControllerProvider.notifier);
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
@@ -69,6 +72,19 @@ class SettingsScreen extends ConsumerWidget {
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute<void>(builder: (_) => const AiSettingsScreen()),
             ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.sync),
+            title: const Text('GitHub sync'),
+            subtitle: Text(
+              sync.settings.enabled && sync.settings.configured
+                  ? '${sync.settings.owner}/${sync.settings.repo} · ${sync.settings.branch}'
+                  : 'Off (optional)',
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.of(
+              context,
+            ).push(MaterialPageRoute<void>(builder: (_) => const SyncScreen())),
           ),
           const Divider(),
           const ListTile(

@@ -57,4 +57,19 @@ AI (optional; needs your own Gemini key — the free tier is enough):
 21. Switch back to Gemini in settings → its saved key/model are still there;
     notes are unchanged.
 
+GitHub sync (optional; needs a private repo with a README and a fine-grained
+token — see docs/SYNC.md):
+
+22. Settings → **GitHub sync** → fill in → **Test connection** → "Connected to a
+    private repository…". Save; the token is not shown again.
+23. Enable → **Sync now** → notes appear in the repository on github.com, one
+    commit per file.
+24. Edit a note on github.com, Sync now → the change is on the phone; ⋮ →
+    Previous versions shows the old text.
+25. Edit the same note on the phone and on github.com differently, Sync now →
+    a "(GitHub conflict …)" note appears; your phone version is unchanged.
+26. Delete a note on github.com, Sync now → it is still on the phone.
+27. Airplane mode → Sync now → "No connection to GitHub", nothing changed.
+28. Revoke the token on GitHub → Sync now → "GitHub rejected the token".
+
 Please report the Android version and device model with any failure.
