@@ -6,6 +6,7 @@ import '../../data/saf_vault_storage.dart';
 import '../ai/ai_config.dart' show secretStoreProvider, SecretStore;
 import '../vault/vault_controller.dart';
 import 'github_client.dart';
+import 'remote_proposals.dart';
 import 'sync_engine.dart';
 import 'sync_state_store.dart';
 
@@ -245,6 +246,23 @@ class SyncController extends Notifier<SyncUiState> {
       repo: repo.trim(),
     );
     return c.getRepo();
+  }
+
+  /// Inbox of AI proposals written by the optional MCP server. Requires
+  /// sync to be on and configured and a vault to be open.
+  Future<RemoteProposalInbox> proposalInbox() async {
+    final s = state.settings;
+    final v = ref.read(vaultControllerProvider);
+    if (!s.enabled || !s.configured || v is! VaultReady) {
+      throw SyncException(SyncErrorCode.notConfigured);
+    }
+    return RemoteProposalInbox(
+      client: await _client(),
+      branch: s.branch,
+      vault: v.vault,
+      storage: ref.read(vaultStorageProvider),
+      repository: ref.read(noteRepositoryProvider),
+    );
   }
 
   Future<SyncReport?> syncNow() async {

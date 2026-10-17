@@ -72,4 +72,26 @@ token — see docs/SYNC.md):
 27. Airplane mode → Sync now → "No connection to GitHub", nothing changed.
 28. Revoke the token on GitHub → Sync now → "GitHub rejected the token".
 
+AI apps through the MCP server (optional; needs GitHub sync working and the
+server deployed on Vercel — see mcp-server/README.md):
+
+29. Open `https://<project>.vercel.app/api/mcp` in a browser →
+    `{"error":"Missing or wrong access secret."}`.
+30. Add the connector in one AI app (Claude, Perplexity, Manus or ChatGPT) →
+    ask "List my Emerald notes" → your synced notes are listed; nothing from
+    `.obsidian/` or other hidden folders.
+31. Ask it to propose a change to an existing note → it reports a proposal
+    saved and that nothing changed yet. On github.com the note is unchanged
+    and a file appears in `.emerald/proposals/`.
+32. In Emerald: Settings → GitHub sync → **AI app proposals** → the diff is
+    shown. **Reject** → the proposal file disappears on GitHub; the note is
+    unchanged.
+33. Repeat and **Approve & save** → the note changes on the phone (⋮ →
+    Previous versions shows the old text) → **Sync now** → the change is on
+    github.com.
+34. Edit the note on the phone after the AI proposed a change → the
+    inbox shows "differs from the version the AI read" and only offers Reject.
+35. Change `EMERALD_MCP_SECRET` in Vercel and redeploy → the AI app can no
+    longer connect.
+
 Please report the Android version and device model with any failure.

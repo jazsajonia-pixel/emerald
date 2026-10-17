@@ -126,6 +126,21 @@ class FakeGitHub {
         'commit': {'sha': 'c${commits.length}'},
       }, current == null ? 201 : 200);
     }
+    if (r.method == 'DELETE' && rest.isNotEmpty && rest[0] == 'contents') {
+      final path = rest.sublist(1).join('/');
+      final body = jsonDecode(r.body) as Map<String, dynamic>;
+      final current = files[path];
+      if (current == null) return _j({'message': 'Not Found'}, 404);
+      if (body['sha'] != gitBlobSha(current)) {
+        return _j({'message': 'does not match'}, 409);
+      }
+      files.remove(path);
+      commits.add(body['message'] as String);
+      return _j({
+        'content': null,
+        'commit': {'sha': 'c${commits.length}'},
+      });
+    }
     return _j({'message': 'Not Found'}, 404);
   }
 }

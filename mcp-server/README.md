@@ -13,7 +13,8 @@ AI app (cloud) ──HTTPS + secret──▶ this server (Vercel) ──GitHub A
 
 It works on the **GitHub copy** of your vault, so it needs Emerald's GitHub
 sync (Settings → GitHub sync) set up first. Tap **Sync now** before asking an
-AI about recent edits, and again afterwards to receive proposals.
+AI about recent edits. Proposals appear in Emerald under Settings → GitHub
+sync → **AI app proposals**.
 
 ## Tools
 
@@ -92,8 +93,9 @@ screenshots.
   Enterprise/Edu plans on ChatGPT web; check your plan.
 
 Then ask, e.g., "Using Emerald, find my notes about tomatoes and propose a
-summary section for Garden.md". Open Emerald → Sync now → review the
-proposal.
+summary section for Garden.md". In Emerald: Settings → GitHub sync → **AI app
+proposals** → review the diff → **Approve & save** (or Reject) → **Sync now**
+to upload the approved change.
 
 Menu names above follow each provider's help pages as of October 2026 and
 may change. These setups were not tested end to end with each app; the

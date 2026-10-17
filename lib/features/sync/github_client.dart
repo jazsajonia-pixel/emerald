@@ -237,6 +237,26 @@ class GitHubClient {
     return sha;
   }
 
+  /// Deletes one file with one commit. Used only for AI proposal files in
+  /// `.emerald/proposals/` (never for notes). GitHub refuses (409/422) if the
+  /// file changed since [sha], reported as [SyncErrorCode.remoteChanged].
+  Future<void> deleteFile({
+    required String path,
+    required String sha,
+    required String branch,
+    required String message,
+  }) async {
+    final body = jsonEncode({'message': message, 'sha': sha, 'branch': branch});
+    await _json(
+      () => _client.delete(
+        _repoUri(['contents', ...path.split('/')]),
+        headers: {..._headers, 'content-type': 'application/json'},
+        body: body,
+      ),
+      conflictOn409: true,
+    );
+  }
+
   Future<Map<String, Object?>> _json(
     Future<http.Response> Function() call, {
     bool emptyRepoOn409 = false,
