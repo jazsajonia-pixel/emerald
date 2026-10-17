@@ -56,8 +56,42 @@ jobs:
       - name: Tests
         run: flutter test
 
+      - name: Prepare optional release keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.EMERALD_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/emerald-release.jks"
+            echo "EMERALD_KEYSTORE_PATH=$RUNNER_TEMP/emerald-release.jks" >> "$GITHUB_ENV"
+            echo "Release keystore provided via secrets."
+          else
+            echo "No release keystore secret: the APK will be signed with the runner's debug key."
+          fi
+
       - name: Build release APK
-        run: flutter build apk --release
+        env:
+          EMERALD_KEYSTORE_PASSWORD: ${{ secrets.EMERALD_KEYSTORE_PASSWORD }}
+          EMERALD_KEY_ALIAS: ${{ secrets.EMERALD_KEY_ALIAS }}
+          EMERALD_KEY_PASSWORD: ${{ secrets.EMERALD_KEY_PASSWORD }}
+        # Run number as versionCode so newer CI builds can upgrade older ones
+        # (when signed with the same key).
+        run: flutter build apk --release --build-number=${{ github.run_number }}
+
+      - name: Report signing status
+        run: |
+          rm -f "$RUNNER_TEMP/emerald-release.jks"
+          APKSIGNER=$(ls -d "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
+          "$APKSIGNER" verify build/app/outputs/flutter-apk/app-release.apk
+          SIGNER=$("$APKSIGNER" verify --print-certs build/app/outputs/flutter-apk/app-release.apk | grep -m1 'certificate DN' || true)
+          echo "APK signer: $SIGNER"
+          {
+            echo "### APK signing"
+            if echo "$SIGNER" | grep -q 'CN=Android Debug'; then
+              echo "Signed with this runner's **debug key** (not a stable release key). Installing a newer build over an older one fails; uninstall first. See docs/RELEASE.md."
+            else
+              echo "Signed with the configured release key: \`$SIGNER\`"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: APK checksum
         run: |

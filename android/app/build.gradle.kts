@@ -4,6 +4,11 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// Optional stable release signing. Set these environment variables (CI reads
+// them from GitHub secrets; see docs/RELEASE.md). Without them the release APK
+// is signed with the build machine's debug key. No keystore is in the repo.
+val releaseKeystore: String? = System.getenv("EMERALD_KEYSTORE_PATH")?.takeIf { it.isNotBlank() }
+
 android {
     namespace = "io.github.jazsajonia.emerald"
     compileSdk = flutter.compileSdkVersion
@@ -15,7 +20,6 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "io.github.jazsajonia.emerald"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
@@ -29,11 +33,25 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        if (releaseKeystore != null) {
+            create("release") {
+                storeFile = file(releaseKeystore)
+                storePassword = System.getenv("EMERALD_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("EMERALD_KEY_ALIAS")
+                keyPassword = System.getenv("EMERALD_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig =
+                if (releaseKeystore != null) {
+                    signingConfigs.getByName("release")
+                } else {
+                    signingConfigs.getByName("debug")
+                }
         }
     }
 }
