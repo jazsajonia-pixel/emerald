@@ -92,6 +92,27 @@ Not documented on those pages and therefore handled defensively: GitHub's
 response for an empty repository's tree (Emerald treats `409` there as
 "empty repository" and stops without changes).
 
+## AI app proposals (optional MCP server)
+
+The optional server in `mcp-server/` lets AI apps read the GitHub copy of the
+vault and store proposals in `.emerald/proposals/` (a hidden folder, so sync
+never copies it into the vault). Settings → GitHub sync → **AI app
+proposals** lists them:
+
+- **Ready**: the note on the phone is exactly the version the AI read (git
+  blob SHA match) — shown as a diff with **Approve & save** / **Reject**.
+- **Out of date**: the note changed on the phone, is missing, or (for a new
+  note) the name is taken — only **Reject** is offered; ask the AI again
+  after syncing.
+- **Already applied** / **invalid**: can be removed from the list.
+
+Approving writes the note through the normal note repository (conflict
+check, previous version kept in history, creates never overwrite); the
+change reaches GitHub with the next **Sync now**. Approving or rejecting
+removes the proposal file on GitHub with one commit (the only delete Emerald
+performs, and only inside `.emerald/proposals/`). Notes on GitHub are never
+written by the inbox.
+
 ## Limitations
 
 - Manual sync only; one commit per changed file (large first syncs create

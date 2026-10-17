@@ -1,6 +1,10 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:emerald/data/memory_vault_storage.dart';
 import 'package:emerald/data/vault_storage.dart';
 import 'package:emerald/features/ai/ai_config.dart';
+import 'package:emerald/features/sync/git_hash.dart';
 import 'package:emerald/features/sync/github_client.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -137,6 +141,49 @@ void main() {
     expect(
       find.text(SyncException(SyncErrorCode.unauthorized).userMessage),
       findsOneWidget,
+    );
+  });
+
+  testWidgets('review and approve an AI app proposal from the inbox', (
+    tester,
+  ) async {
+    await setUpApp(tester);
+    gh.set('Local.md', 'from phone');
+    gh.set(
+      '.emerald/proposals/20261018T091500Z-00000001.json',
+      jsonEncode({
+        'format': 'emerald-proposal',
+        'version': 1,
+        'id': '20261018T091500Z-00000001',
+        'createdAt': '2026-10-18T09:15:00.000Z',
+        'kind': 'update',
+        'path': 'Local.md',
+        'baseSha': gitBlobSha(Uint8List.fromList(utf8.encode('from phone'))),
+        'content': 'from phone\nadded by Claude',
+        'summary': 'Add a line',
+        'client': null,
+      }),
+    );
+    await _openSync(tester);
+    // Inbox is unavailable until sync is configured and on.
+    final tile = find.byKey(const Key('sync-proposals'));
+    await tester.ensureVisible(tile);
+    expect(tester.widget<ListTile>(tile).enabled, isFalse);
+    await fillAndSave(tester);
+    await _tap(tester, find.byKey(const Key('sync-enabled')));
+    expect(tester.widget<ListTile>(tile).enabled, isTrue);
+
+    await _tap(tester, tile);
+    expect(find.text('AI app proposals'), findsWidgets);
+    expect(find.text('Add a line'), findsOneWidget);
+    expect(find.textContaining('added by Claude'), findsWidgets);
+
+    await _tap(tester, find.text('Approve & save'));
+    expect(find.textContaining('Tap Sync now to upload'), findsOneWidget);
+    expect(find.text('No proposals are waiting.'), findsOneWidget);
+    expect(
+      gh.files.containsKey('.emerald/proposals/20261018T091500Z-00000001.json'),
+      isFalse,
     );
   });
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'github_client.dart';
+import 'proposal_inbox_screen.dart';
 import 'sync_controller.dart';
 import 'sync_engine.dart';
 
@@ -324,6 +325,24 @@ class _SyncScreenState extends ConsumerState<SyncScreen> {
               ),
             if (s.lastReport != null && !s.running)
               _ReportView(report: s.lastReport!),
+            const SizedBox(height: 8),
+            ListTile(
+              key: const Key('sync-proposals'),
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.inbox_outlined),
+              title: const Text('AI app proposals'),
+              subtitle: const Text(
+                'Review changes suggested by ChatGPT, Claude, Perplexity or '
+                'Manus through the optional Emerald MCP server.',
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              enabled: !s.running && set.enabled && set.configured,
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const ProposalInboxScreen(),
+                ),
+              ),
+            ),
             const Divider(height: 32),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
