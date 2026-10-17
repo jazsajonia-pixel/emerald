@@ -8,8 +8,8 @@
 | 3 — Links, backlinks, search | Done (CI + emulator launch) | PR #4. In-memory index instead of SQLite (see docs/LINKS_AND_SEARCH.md) |
 | 4 — Interactive graph | Done (CI + emulator launch) | PR #5. Custom force layout, global/local, highlight, filters |
 | 5 — AI foundation and safe tools | Done (CI + emulator launch) | PR #6. Gemini adapter, vault-scoped tools, approval flow (docs/AI.md). Real API not exercised (mocked) |
-| 6 — Additional providers / agents | In progress | OpenAI-compatible adapter (OpenAI, local Ollama); MCP not implemented (documented decision) |
-| 7 — Backup and hybrid sync | Not started | |
+| 6 — Additional providers / agents | Done (CI + emulator launch) | PR #7. OpenAI-compatible adapter (OpenAI, local Ollama); MCP not implemented (documented decision). Real APIs not exercised (mocked) |
+| 7 — Backup and hybrid sync | In progress | GitHub repository sync chosen by the owner (docs/SYNC.md). Tested against a fake GitHub API only |
 | 8 — Release hardening | Not started | |
 
 Testing levels are reported separately: unit/widget tests (CI), CI APK build,

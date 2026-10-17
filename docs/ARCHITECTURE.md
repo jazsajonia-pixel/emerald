@@ -39,6 +39,9 @@ android/app/src/main/kotlin/...   Small Kotlin platform channel for Storage Acce
   only gets narrow vault-scoped tools; writes are proposals that require
   approval and go through the conflict-checked repository. See
   [`AI.md`](AI.md).
+- **Sync:** optional GitHub repository sync over the REST API (`http`, no
+  SDK), three-way comparison with Git blob hashes, conflict copies, no
+  deletions. See [`SYNC.md`](SYNC.md).
 - **Dependencies:** each one must be maintained, Android-compatible, and have a
   clear purpose. No cloud backend, vector DB, or agent framework without a
   tested requirement.

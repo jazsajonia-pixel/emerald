@@ -13,6 +13,7 @@ stay compatible with Obsidian and other editors.
 - Links, backlinks and search: [`docs/LINKS_AND_SEARCH.md`](docs/LINKS_AND_SEARCH.md)
 - Graph: [`docs/GRAPH.md`](docs/GRAPH.md)
 - AI (optional, bring your own key): [`docs/AI.md`](docs/AI.md)
+- GitHub sync (optional): [`docs/SYNC.md`](docs/SYNC.md)
 - Testing levels and manual device checklist: [`docs/TESTING.md`](docs/TESTING.md)
 
 ## Project facts
@@ -73,5 +74,8 @@ flutter build apk --release
 - Emerald does not send vault content anywhere unless you explicitly configure
   a remote AI provider with your own key and send a question. See
   [`docs/AI.md`](docs/AI.md) for exactly what is sent and how keys are stored.
+- Optional GitHub sync sends notes only to the private repository you
+  configure; it never deletes notes on either side
+  ([`docs/SYNC.md`](docs/SYNC.md)).
 - AI can only *propose* note changes; nothing is written until you approve it,
   and there is no AI delete tool.
