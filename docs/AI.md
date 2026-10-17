@@ -140,26 +140,31 @@ as-is; tool use is never simulated.
 
 ## MCP and external agents
 
-Emerald does **not** implement the Model Context Protocol in this release, and
-no external agent can access the vault.
+**Phone app:** Emerald itself does not run an MCP server or client. A remote
+agent cannot reach an app on a phone or read Android Storage Access Framework
+folders, and stdio transport (client launches the server as a subprocess)
+does not apply to an Android app
+(https://modelcontextprotocol.io/specification/latest/basic/transports).
 
-- The MCP specification defines two standard transports: stdio, where the
-  *client launches the server as a subprocess*, and Streamable HTTP
-  (https://modelcontextprotocol.io/specification/latest/basic/transports).
-  Authorization is optional; HTTP servers that use it act as OAuth 2.1
-  resource servers (https://modelcontextprotocol.io/specification/latest/basic/authorization).
-- **Emerald as MCP server** (letting a desktop/remote agent use the vault):
-  stdio does not apply (an external agent cannot launch an Android app as a
-  subprocess); Streamable HTTP would require running an HTTP server on the
-  phone plus OAuth or another auth scheme, and would expose notes to the
-  network. A remote agent can never read Android Storage Access Framework
-  folders directly. Not justified by a current requirement.
-- **Emerald as MCP client** (giving the in-app AI extra tools from remote MCP
-  servers): would widen what data leaves the phone and is not needed for the
-  vault tools, which Emerald implements natively.
-- If a real use case appears, the safe path is an opt-in, local-only MCP
-  client or server with the same proposal/approval rules, documented with its
-  hosting and authentication model before implementation.
+**Remote MCP server (owner-requested, Phase 9):** ChatGPT, Claude,
+Perplexity and Manus connect to custom connectors from their own clouds over
+public HTTPS. The optional server in `mcp-server/` (deployed by the owner on
+Vercel) provides that endpoint and works on the GitHub sync repository:
+
+- Read tools: list, read, search, backlinks — Markdown notes only, hidden
+  folders excluded.
+- One write tool, `propose_note_change`, which stores a proposal in
+  `.emerald/proposals/` and never edits a note. The owner reviews the diff and
+  approves or rejects it in Emerald (same rule as in-app AI). No delete or
+  rename tools.
+- Access by a shared secret (header or `?key=`) stored in Vercel environment
+  variables, plus a fine-grained GitHub token limited to the sync repo.
+
+Setup, security notes and per-app connection steps: `mcp-server/README.md`.
+
+**Emerald as MCP client** (giving the in-app AI extra tools from remote MCP
+servers) is not implemented: it would widen what data leaves the phone and is
+not needed for the vault tools, which Emerald implements natively.
 
 ## Manual verification per provider
 
