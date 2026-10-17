@@ -2,8 +2,8 @@
 
 | Phase | Status | Notes |
 | --- | --- | --- |
-| 0 — Repository and build foundation | In progress | Flutter project, CI, APK artifact |
-| 1 — Shell and navigation | Not started | |
+| 0 — Repository and build foundation | Done | CI green, APK artifact uploaded (PR #1) |
+| 1 — Shell and navigation | In progress | Widget-tested; not yet run on a device |
 | 2 — Safe Markdown vault access | Not started | |
 | 3 — Links, backlinks, search | Not started | |
 | 4 — Interactive graph | Not started | |
