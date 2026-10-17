@@ -125,6 +125,37 @@ void main() {
     expect(gh.text('a.md'), 'v1');
   });
 
+  test(
+    'default API base is api.github.com; a prefix base is preserved',
+    () async {
+      final urls = <Uri>[];
+      final mock = MockClient((r) async {
+        urls.add(r.url);
+        return http.Response(
+          '{"private":true,"permissions":{"push":true}}',
+          200,
+        );
+      });
+      await GitHubClient(
+        token: 't',
+        owner: 'me',
+        repo: 'notes',
+        client: mock,
+      ).getRepo();
+      await GitHubClient(
+        token: 't',
+        owner: 'me',
+        repo: 'notes',
+        client: mock,
+        apiBase: Uri.parse('https://ghe.example/api/v3/'),
+      ).getRepo();
+      expect(urls.map((u) => u.toString()), [
+        'https://api.github.com/repos/me/notes',
+        'https://ghe.example/api/v3/repos/me/notes',
+      ]);
+    },
+  );
+
   test('truncated trees are refused', () async {
     final c = GitHubClient(
       token: 't',

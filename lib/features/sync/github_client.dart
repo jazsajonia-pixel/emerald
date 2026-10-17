@@ -95,14 +95,19 @@ class GitHubClient {
     required this.repo,
     http.Client? client,
     this.timeout = const Duration(seconds: 30),
-  }) : _client = client ?? http.Client() {
+    Uri? apiBase,
+  }) : _client = client ?? http.Client(),
+       _api = apiBase ?? defaultApi {
     _token = token;
     if (!validName(owner) || !validName(repo)) {
       throw SyncException(SyncErrorCode.notConfigured, 'invalid owner/repo');
     }
   }
 
-  static final _api = Uri.parse('https://api.github.com/');
+  static final defaultApi = Uri.parse('https://api.github.com/');
+
+  /// Always [defaultApi] in the app; overridable only for API checks.
+  final Uri _api;
   static const apiVersion = '2022-11-28';
 
   late final String _token;
@@ -130,7 +135,13 @@ class GitHubClient {
 
   Uri _repoUri(List<String> segments, [Map<String, String>? query]) =>
       _api.replace(
-        pathSegments: ['repos', owner, repo, ...segments],
+        pathSegments: [
+          ..._api.pathSegments.where((s) => s.isNotEmpty),
+          'repos',
+          owner,
+          repo,
+          ...segments,
+        ],
         queryParameters: query,
       );
 

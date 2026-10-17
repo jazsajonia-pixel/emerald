@@ -101,6 +101,18 @@ response for an empty repository's tree (Emerald treats `409` there as
 - Case-only renames and renames in general appear as a new file plus a kept
   old file (nothing is deleted).
 - No merge UI: conflicts are resolved by editing the note and its conflict copy.
-- Tested with automated tests against an in-memory fake of the documented
-  GitHub API. Not tested against real GitHub by the developer agent — see the
-  manual checklist in docs/TESTING.md.
+## How this was tested
+
+- Automated: unit/widget tests against an in-memory fake of the documented
+  GitHub API (policy table, conflicts, no deletions, concurrent changes,
+  corrupted downloads, fatal errors, full UI flow).
+- Real GitHub API (October 2026, by the developer agent, on a temporary
+  branch of this repository that was deleted afterwards; in-memory vault, not
+  a phone): tree listing and 12 blob downloads, file create and update via the
+  contents API, a conflict copy, a no-op third sync, a stale-SHA update
+  rejected by GitHub, a missing branch reported as not found, and an invalid
+  token rejected by `api.github.com` (401). These requests went through the
+  agent's authenticated GitHub proxy (same REST API, different host), except
+  the invalid-token check which hit `api.github.com` directly.
+- Not yet done: a real phone with a real SAF folder (manual checklist in
+  docs/TESTING.md, steps 22–28).
