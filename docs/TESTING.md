@@ -28,4 +28,10 @@ Install the APK from the latest successful run, then:
 8. Settings → **Forget vault** → Brain shows "No vault selected"; files remain.
 9. Try creating a note with an existing name → refused, original unchanged.
 
+10. Write `[[Test]]` in another note, save, open "Test" → ⋮ → *Links and
+    backlinks* shows it. In preview, tapping the link opens the note.
+11. Brain → search icon → search a word from a note; it is found.
+12. Edit a note in another app, return, tap **Rescan**; search finds the new
+    text.
+
 Please report the Android version and device model with any failure.
