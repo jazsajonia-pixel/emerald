@@ -48,5 +48,13 @@ AI (optional; needs your own Gemini key — the free tier is enough):
     change is in the file (check in another app); ⋮ → Previous versions shows
     the pre-AI version.
 18. Turn on airplane mode and ask again → a network error, notes unchanged.
+19. OpenAI-compatible with OpenAI: provider **OpenAI-compatible**, base URL
+    `https://api.openai.com/v1`, your key, model `gpt-6-luna`, reasoning
+    effort `none` → Test connection → ask a question about a note (paid).
+20. OpenAI-compatible with local Ollama (e.g. Termux): base URL
+    `http://localhost:11434/v1`, no key, a tool-capable model → ask a
+    question. Entering `http://<another-ip>` is refused.
+21. Switch back to Gemini in settings → its saved key/model are still there;
+    notes are unchanged.
 
 Please report the Android version and device model with any failure.

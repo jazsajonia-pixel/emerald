@@ -13,6 +13,13 @@ import 'fake_provider.dart';
 const _vault = VaultHandle(id: 'memory://vault', name: 'My Vault');
 const _key = 'MY-SECRET-KEY-123';
 
+Future<void> _tapVisible(WidgetTester tester, Finder f) async {
+  await tester.ensureVisible(f);
+  await tester.pumpAndSettle();
+  await tester.tap(f);
+  await tester.pumpAndSettle();
+}
+
 Future<void> _openAi(WidgetTester tester) async {
   await tester.tap(
     find.descendant(
@@ -32,8 +39,8 @@ void main() {
       await pumpEmerald(
         tester,
         secrets: secrets,
-        aiFactory: (id, key, model) {
-          keys.add(key);
+        aiFactory: (s) {
+          keys.add(s.apiKey);
           return FakeProvider([]);
         },
       );
@@ -83,10 +90,7 @@ void main() {
   testWidgets('settings: connection errors are shown in plain language', (
     tester,
   ) async {
-    await pumpEmerald(
-      tester,
-      aiFactory: (id, key, model) => _FailingProvider(),
-    );
+    await pumpEmerald(tester, aiFactory: (s) => _FailingProvider());
     await _openAi(tester);
     await tester.tap(find.text('Set up a provider'));
     await tester.pumpAndSettle();
@@ -97,6 +101,71 @@ void main() {
       find.text(AiException(AiErrorCode.unauthorized).userMessage),
       findsOneWidget,
     );
+  });
+
+  testWidgets('settings: OpenAI-compatible base URL rules', (tester) async {
+    final secrets = MemorySecretStore();
+    final built = <ProviderSettings>[];
+    await pumpEmerald(
+      tester,
+      secrets: secrets,
+      aiFactory: (s) {
+        built.add(s);
+        return FakeProvider([]);
+      },
+    );
+    await _openAi(tester);
+    await tester.tap(find.text('Set up a provider'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('base-url-field')), findsNothing);
+    await tester.tap(find.text('Google Gemini'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('OpenAI-compatible').last);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('base-url-field')), findsOneWidget);
+    expect(
+      tester
+          .widget<TextField>(find.byKey(const Key('base-url-field')))
+          .controller!
+          .text,
+      'https://api.openai.com/v1',
+    );
+
+    // Plain http to another machine is refused.
+    await tester.enterText(
+      find.byKey(const Key('base-url-field')),
+      'http://192.168.1.9:11434/v1',
+    );
+    await tester.enterText(find.byKey(const Key('model-field')), 'llama3');
+    await _tapVisible(tester, find.text('Save'));
+    expect(
+      find.textContaining('plain http is only allowed for localhost'),
+      findsOneWidget,
+    );
+    expect(secrets.values, isEmpty);
+
+    // A server on this phone needs no key.
+    await tester.enterText(
+      find.byKey(const Key('base-url-field')),
+      'http://localhost:11434/v1',
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('API key (optional for localhost)'), findsOneWidget);
+    await _tapVisible(tester, find.text('Test connection'));
+    expect(built.single.baseUrl, 'http://localhost:11434/v1');
+    expect(built.single.apiKey, isEmpty);
+    await _tapVisible(tester, find.text('Save'));
+    expect(secrets.values['ai.provider'], 'openai_compatible');
+    expect(
+      secrets.values['ai.openai_compatible.baseUrl'],
+      'http://localhost:11434/v1',
+    );
+    expect(secrets.values.containsKey('ai.openai_compatible.apiKey'), isFalse);
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    expect(find.text('Ask about your notes'), findsNothing); // no vault yet
+    expect(find.text('Open a vault first'), findsOneWidget);
   });
 
   testWidgets('chat: consent, proposal preview, approve and reject', (
@@ -123,7 +192,7 @@ void main() {
         'ai.model': 'm',
         'ai.gemini.apiKey': _key,
       }),
-      aiFactory: (id, key, model) => fake,
+      aiFactory: (s) => fake,
     );
     await _openAi(tester);
     expect(find.text('Ask about your notes'), findsOneWidget);
@@ -180,7 +249,7 @@ void main() {
         'ai.gemini.apiKey': _key,
         'ai.consent': 'yes',
       }),
-      aiFactory: (id, key, model) => fake,
+      aiFactory: (s) => fake,
     );
     await _openAi(tester);
     await tester.enterText(find.byKey(const Key('ai-input')), 'make notes');
@@ -224,7 +293,7 @@ void main() {
         'ai.gemini.apiKey': _key,
         'ai.consent': 'yes',
       }),
-      aiFactory: (id, key, model) => fake,
+      aiFactory: (s) => fake,
     );
     await _openAi(tester);
     await tester.enterText(find.byKey(const Key('ai-input')), 'edit');

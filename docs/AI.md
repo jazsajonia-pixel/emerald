@@ -1,4 +1,4 @@
-# AI in Emerald (Phase 5)
+# AI in Emerald (Phases 5–6)
 
 AI is optional. Emerald works fully without it, sends nothing anywhere until
 you add your own API key, and asks for consent before the first request.
@@ -15,9 +15,14 @@ AI Hub UI ──> ChatController ──> AiProvider (adapter interface)
 
 - `lib/features/ai/ai_types.dart` — provider-independent types: messages,
   tool specs, tool calls, capabilities, typed errors (`AiErrorCode`).
-- `lib/features/ai/providers/gemini_provider.dart` — the only provider
-  adapter so far. New providers implement `AiProvider` and are added to
+- `lib/features/ai/providers/gemini_provider.dart` — Google Gemini adapter.
+- `lib/features/ai/providers/openai_compatible_provider.dart` — adapter for
+  any server implementing the OpenAI Chat Completions API (OpenAI itself,
+  Ollama, and similar). New providers implement `AiProvider` and are added to
   `providerCatalog` and `aiProviderFactoryProvider` in `ai_config.dart`.
+- Settings are stored per provider (`ai.<provider>.apiKey/model/baseUrl/
+  reasoningEffort`), so switching providers keeps each one's settings and
+  never touches the vault — no migration is ever needed.
 - `lib/features/ai/tools/vault_tools.dart` — the tools the model may call.
 - `lib/features/ai/chat_controller.dart` — the tool loop (max 8 model calls
   per question).
@@ -62,9 +67,17 @@ At most 10 proposals per conversation.
   never written to the vault, never displayed after saving, never logged, and
   never included in error messages (covered by tests). Android auto-backup is
   disabled for the app (`allowBackup="false"`).
-- Gemini free tier: Google's pricing page states free-tier content may be used
-  to improve Google products; paid-tier content is not. Emerald shows this in
-  the consent dialog and settings.
+- Each provider's data notice is shown in the consent dialog and settings:
+  - Gemini free tier: Google's pricing page states free-tier content may be
+    used to improve Google products; paid-tier content is not.
+  - OpenAI: "data sent to the OpenAI API is not used to train or improve
+    OpenAI models (unless you explicitly opt in)"; abuse-monitoring logs are
+    kept for up to 30 days (https://platform.openai.com/docs/guides/your-data).
+  - Other OpenAI-compatible servers: their own policy applies. A server on
+    `localhost` keeps everything on the phone.
+- Network: HTTPS only. Plain HTTP is allowed solely to `localhost` /
+  `127.0.0.1` (Android network security config + URL validation), so a key or
+  note can never be sent unencrypted over a network.
 
 ## Gemini setup (user)
 
@@ -73,6 +86,25 @@ At most 10 proposals per conversation.
    models; does not use generation quota) → pick a model → Save.
 3. Default model: `gemini-3.8-flash` (from the official models page at the
    time of writing). Any model ID returned by "Test connection" can be used.
+
+## OpenAI-compatible setup (user)
+
+- **OpenAI** (paid, billed per token by OpenAI; no free API tier is assumed):
+  base URL `https://api.openai.com/v1`, key from platform.openai.com. Tool use
+  through Chat Completions is limited on OpenAI's newest models: OpenAI
+  documents `gpt-6-luna` function calling over Chat Completions only with
+  `reasoning_effort: "none"`, and states GPT-6 Astra / GPT-6.1 Sol do not
+  support function calling there. Use model `gpt-6-luna` and set
+  "Reasoning effort" to `none`. (Example price from OpenAI's model page:
+  $0.10 / 1M input tokens, $0.50 / 1M output tokens for gpt-6-luna.)
+- **Ollama on the phone** (free, local; e.g. installed in Termux): base URL
+  `http://localhost:11434/v1`, leave key empty, model = a pulled model that
+  supports tools. Note search needs a tool-capable model.
+- **Other servers**: any HTTPS endpoint implementing `/chat/completions` and
+  `/models`. Emerald does not claim support for a specific vendor beyond the
+  documented API shape; verify with "Test connection" and the manual steps.
+- "Reasoning effort" is only sent when filled in, because not every server
+  accepts the field.
 
 ## Verified API facts (checked October 2026)
 
@@ -85,15 +117,56 @@ At most 10 proposals per conversation.
 | Model parts may carry `thoughtSignature` and must be sent back unchanged | https://ai.google.dev/gemini-api/docs/function-calling |
 | Model IDs | https://ai.google.dev/gemini-api/docs/models |
 | Free/paid tiers and data use | https://ai.google.dev/gemini-api/docs/pricing |
+| OpenAI `POST /chat/completions`: roles, `tools[{type:function,function:{name,description,parameters}}]`, `tool_calls[].function.arguments` (JSON string), `{role:tool,tool_call_id}` | https://platform.openai.com/docs/api-reference/chat/create |
+| OpenAI `GET https://api.openai.com/v1/models`, `Authorization: Bearer` | https://platform.openai.com/docs/api-reference/models/list |
+| OpenAI 401/403/429 (rate vs `insufficient_quota`, spend-limit codes)/500/503 | https://platform.openai.com/docs/guides/error-codes |
+| gpt-6-luna endpoints, function-calling restriction, price | https://platform.openai.com/docs/models/gpt-6-luna |
+| Astra/Sol: no function calling via Chat Completions; `reasoning_effort` values | https://platform.openai.com/docs/guides/reasoning |
+| Ollama OpenAI compatibility (`/v1/chat/completions` with tools, `/v1/models`, port 11434, key ignored locally) | https://docs.ollama.com/api/openai-compatibility |
 
 ## Capability matrix
 
-| Capability | Gemini adapter |
-| --- | --- |
-| Text answers | Yes |
-| Tool use | Yes |
-| Streaming | Not implemented (full responses only) |
-| Model listing | Yes |
+| Capability | Gemini | OpenAI-compatible |
+| --- | --- | --- |
+| Text answers | Yes | Yes |
+| Tool use (search/read, proposals) | Yes | Yes, if the model/server supports Chat Completions function calling (see above) |
+| Streaming | Not implemented | Not implemented |
+| Model listing | Yes (`generateContent` models only) | Yes (all IDs the server returns) |
+| Key required | Yes | Yes, except `localhost` servers |
+| Free option | Free tier (rate-limited; data may be used by Google) | Local Ollama (free, on-device) |
+
+If a model cannot use tools, the provider returns an error that Emerald shows
+as-is; tool use is never simulated.
+
+## MCP and external agents
+
+Emerald does **not** implement the Model Context Protocol in this release, and
+no external agent can access the vault.
+
+- The MCP specification defines two standard transports: stdio, where the
+  *client launches the server as a subprocess*, and Streamable HTTP
+  (https://modelcontextprotocol.io/specification/latest/basic/transports).
+  Authorization is optional; HTTP servers that use it act as OAuth 2.1
+  resource servers (https://modelcontextprotocol.io/specification/latest/basic/authorization).
+- **Emerald as MCP server** (letting a desktop/remote agent use the vault):
+  stdio does not apply (an external agent cannot launch an Android app as a
+  subprocess); Streamable HTTP would require running an HTTP server on the
+  phone plus OAuth or another auth scheme, and would expose notes to the
+  network. A remote agent can never read Android Storage Access Framework
+  folders directly. Not justified by a current requirement.
+- **Emerald as MCP client** (giving the in-app AI extra tools from remote MCP
+  servers): would widen what data leaves the phone and is not needed for the
+  vault tools, which Emerald implements natively.
+- If a real use case appears, the safe path is an opt-in, local-only MCP
+  client or server with the same proposal/approval rules, documented with its
+  hosting and authentication model before implementation.
+
+## Manual verification per provider
+
+The agent that built Emerald did not call any real provider (no keys; no paid
+usage). Automated tests use a mock HTTP client with request/response shapes
+from the official docs. Before relying on a provider, follow
+docs/TESTING.md steps 14–21.
 
 ## Limits and known gaps
 
@@ -101,7 +174,7 @@ At most 10 proposals per conversation.
 - Conversation history is in memory only and lost when the app closes.
 - Related-note suggestions use explicit links only; AI-inferred links in the
   graph are not implemented yet (the graph reserves a separate edge kind).
-- The real Gemini API was not called during development (no key, no paid
-  usage). The adapter is tested against recorded request/response shapes from
-  the official docs with a mock HTTP client. A real-key check is in the manual
+- No real provider API was called during development (no keys, no paid
+  usage). Adapters are tested against request/response shapes from the
+  official docs with a mock HTTP client. Real-key checks are in the manual
   checklist (docs/TESTING.md).
