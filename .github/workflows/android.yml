@@ -2,7 +2,7 @@ name: Android CI
 
 on:
   push:
-    branches: [main, "phase-*", "feature/**"]
+    branches: [main]
   pull_request:
     branches: [main]
   workflow_dispatch:
