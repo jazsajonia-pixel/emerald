@@ -1,0 +1,136 @@
+name: Release APK
+
+# Publishes a GitHub Release with the APK when a version tag is pushed, e.g.
+#   git tag v0.9.0 && git push origin v0.9.0
+# The tag must match `version:` in pubspec.yaml. Versions below 1.0.0 are
+# published as pre-releases. See docs/RELEASE.md.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  FLUTTER_VERSION: "3.47.7"
+  JAVA_VERSION: "17"
+
+jobs:
+  release:
+    name: Build and publish release
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # commit count is used as versionCode
+
+      - name: Check tag matches pubspec version and is on main
+        id: version
+        run: |
+          VERSION=$(grep -m1 '^version:' pubspec.yaml | sed -E 's/^version:[[:space:]]*([^+[:space:]]+).*/\1/')
+          TAG="${GITHUB_REF_NAME}"
+          if [ "v$VERSION" != "$TAG" ]; then
+            echo "::error::Tag $TAG does not match pubspec version $VERSION"
+            exit 1
+          fi
+          git fetch origin main --quiet
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error::Tag $TAG is not on main"
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "code=$(git rev-list --count HEAD)" >> "$GITHUB_OUTPUT"
+          case "$VERSION" in 0.*|*-*) echo "prerelease=true" >> "$GITHUB_OUTPUT" ;; *) echo "prerelease=false" >> "$GITHUB_OUTPUT" ;; esac
+
+      - name: Set up Java
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Tests
+        run: flutter test
+
+      - name: Prepare optional release keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.EMERALD_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/emerald-release.jks"
+            echo "EMERALD_KEYSTORE_PATH=$RUNNER_TEMP/emerald-release.jks" >> "$GITHUB_ENV"
+          fi
+
+      - name: Build release APK
+        env:
+          EMERALD_KEYSTORE_PASSWORD: ${{ secrets.EMERALD_KEYSTORE_PASSWORD }}
+          EMERALD_KEY_ALIAS: ${{ secrets.EMERALD_KEY_ALIAS }}
+          EMERALD_KEY_PASSWORD: ${{ secrets.EMERALD_KEY_PASSWORD }}
+        run: flutter build apk --release --build-number=${{ steps.version.outputs.code }}
+
+      - name: Name APK, checksum, signing status
+        id: apk
+        run: |
+          rm -f "$RUNNER_TEMP/emerald-release.jks"
+          NAME="emerald-${{ steps.version.outputs.version }}.apk"
+          mkdir -p dist
+          cp build/app/outputs/flutter-apk/app-release.apk "dist/$NAME"
+          (cd dist && sha256sum "$NAME" > "$NAME.sha256")
+          APKSIGNER=$(ls -d "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
+          "$APKSIGNER" verify "dist/$NAME"
+          SIGNER=$("$APKSIGNER" verify --print-certs "dist/$NAME" | grep -m1 'certificate DN' | sed 's/.*certificate DN: //')
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          echo "sha=$(cut -d' ' -f1 "dist/$NAME.sha256")" >> "$GITHUB_OUTPUT"
+          if echo "$SIGNER" | grep -q 'CN=Android Debug'; then
+            echo "signing=Signed with a CI **debug key** (not a stable release key). Installing over a previous Emerald build may fail; uninstall it first (your notes stay in your vault folder, app settings are removed)." >> "$GITHUB_OUTPUT"
+          else
+            echo "signing=Signed with the project release key (\`$SIGNER\`)." >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+          CODE: ${{ steps.version.outputs.code }}
+          PRERELEASE: ${{ steps.version.outputs.prerelease }}
+          APK: ${{ steps.apk.outputs.name }}
+          SHA: ${{ steps.apk.outputs.sha }}
+          SIGNING: ${{ steps.apk.outputs.signing }}
+        run: |
+          BASE="https://github.com/$GITHUB_REPOSITORY/blob/$GITHUB_REF_NAME"
+          {
+            echo "Emerald $VERSION for Android (version code $CODE), built from $GITHUB_SHA."
+            echo
+            echo "**Install:** download \`$APK\` on your phone and open it; allow \"Install unknown apps\" for your browser or file manager when Android asks."
+            echo
+            echo "**SHA-256:** \`$SHA\`"
+            echo
+            echo "**Signing:** $SIGNING"
+            echo
+            echo "**Testing status:** unit/widget tests, release build, and Android emulator (API 34) tests pass in CI. Not yet tested on a real phone. AI providers are optional and were tested against mocked APIs only."
+            echo
+            echo "See [docs/RELEASE.md]($BASE/docs/RELEASE.md) and [docs/STATUS.md]($BASE/docs/STATUS.md)."
+          } > notes.md
+          cat notes.md
+          PRE=""
+          if [ "$PRERELEASE" = "true" ]; then PRE="--prerelease"; fi
+          gh release create "$GITHUB_REF_NAME" "dist/$APK" "dist/$APK.sha256" \
+            --title "Emerald $VERSION" --notes-file notes.md --verify-tag $PRE

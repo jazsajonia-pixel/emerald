@@ -29,6 +29,11 @@ stay compatible with Obsidian and other editors.
 
 ## Download the APK on your phone
 
+**Easiest:** open the repository's **Releases** page on your phone, download
+the latest `emerald-<version>.apk`, and open it. No GitHub sign-in needed.
+
+### From CI (latest build of any branch)
+
 Every push and pull request runs the **Android CI** workflow. When it succeeds
 it uploads an artifact called `emerald-android-apk`.
 

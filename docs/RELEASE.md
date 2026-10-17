@@ -10,8 +10,27 @@ with its SHA-256 checksum. The run's summary page states how the APK was signed.
 
 - Version name: from `pubspec.yaml` (currently `0.9.0`, a pre-release: not yet
   tested on a real phone).
-- Version code: the CI run number, so later builds can upgrade earlier ones
-  **when signed with the same key**.
+- Version code: the number of commits up to the built commit (same in CI
+  and Release builds), so later builds can upgrade earlier ones **when signed
+  with the same key**.
+
+## Publishing a GitHub Release
+
+The **Release APK** workflow (`.github/workflows/release.yml`) runs when a tag
+`v<version>` is pushed. It checks that the tag matches `version:` in
+`pubspec.yaml` and is on `main`, runs analyze and tests, builds and signs the
+APK (release key if the secrets are set, otherwise a debug key), and publishes
+a GitHub Release with `emerald-<version>.apk` and its `.sha256`. The release
+notes state the signing and testing status. Versions below 1.0.0 are marked
+as pre-releases.
+
+```sh
+git checkout main && git pull
+git tag v0.9.0 && git push origin v0.9.0
+```
+
+Release downloads do not expire (unlike CI artifacts, kept 30 days) and do
+not require signing in to GitHub.
 
 ## Signing
 
@@ -90,5 +109,5 @@ backups. Plain HTTP is blocked except to `localhost`.
 2. Manual device checklist in docs/TESTING.md completed on a real phone, with
    results recorded in docs/STATUS.md.
 3. Decide signing (stable key strongly recommended before sharing builds).
-4. Optionally create a GitHub Release with the APK and checksum attached
-   (only with the owner's approval; not done automatically).
+4. Bump `version:` in `pubspec.yaml` (via a PR), then push the matching tag
+   to publish a GitHub Release.
