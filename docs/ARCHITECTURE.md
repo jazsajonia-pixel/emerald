@@ -26,8 +26,12 @@ android/app/src/main/kotlin/...   Small Kotlin platform channel for Storage Acce
   deletes notes.
 - **Vault access:** Android Storage Access Framework (`ACTION_OPEN_DOCUMENT_TREE`
   plus persisted URI permissions) through a small Kotlin platform channel, not
-  raw filesystem paths. Implemented in Phase 2.
-- **State management:** Riverpod (introduced when shared state is needed).
+  raw filesystem paths. See [`STORAGE.md`](STORAGE.md) for the safety rules and
+  limitations.
+- **State management:** Riverpod 3 (`flutter_riverpod`), no code generation.
+- **Markdown preview:** `flutter_markdown_plus` (maintained successor of the
+  discontinued `flutter_markdown`). Remote images are never loaded.
+- **Hashing:** `crypto` (SHA-256 for conflict detection).
 - **Graph:** explicit Markdown/wiki links first. AI-inferred links, if ever
   added, are a separate, visually distinct layer.
 - **AI:** provider-neutral interface; each provider lives in its own adapter.

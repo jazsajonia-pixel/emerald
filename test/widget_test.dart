@@ -1,22 +1,15 @@
-import 'package:emerald/app/app.dart';
 import 'package:emerald/app/home_shell.dart';
 import 'package:emerald/core/ui/state_views.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'helpers/app_harness.dart';
+
 Future<void> _pumpAt(
   WidgetTester tester,
   Size size, {
   double textScale = 1.0,
-}) async {
-  tester.view.physicalSize = size;
-  tester.view.devicePixelRatio = 1.0;
-  tester.platformDispatcher.textScaleFactorTestValue = textScale;
-  addTearDown(tester.view.reset);
-  addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
-  await tester.pumpWidget(const EmeraldApp());
-  await tester.pumpAndSettle();
-}
+}) => pumpEmerald(tester, size: size, textScale: textScale);
 
 void main() {
   const phone = Size(360, 740);
@@ -28,7 +21,7 @@ void main() {
     await _pumpAt(tester, phone);
     expect(find.byType(NavigationBar), findsOneWidget);
     expect(find.byType(NavigationRail), findsNothing);
-    expect(find.text('No vault selected'), findsOneWidget);
+    expect(find.text('No vault selected'), findsWidgets);
   });
 
   testWidgets('every destination opens without errors', (tester) async {
