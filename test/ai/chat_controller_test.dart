@@ -45,8 +45,8 @@ void main() {
             'ai.gemini.apiKey': secretKey,
           }),
         ),
-        aiProviderFactoryProvider.overrideWithValue((id, key, model) {
-          keysSeen.add(key);
+        aiProviderFactoryProvider.overrideWithValue((s) {
+          keysSeen.add(s.apiKey);
           return fake;
         }),
       ],
