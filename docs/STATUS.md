@@ -10,7 +10,7 @@
 | 5 — AI foundation and safe tools | Done (CI + emulator launch) | PR #6. Gemini adapter, vault-scoped tools, approval flow (docs/AI.md). Real API not exercised (mocked) |
 | 6 — Additional providers / agents | Done (CI + emulator launch) | PR #7. OpenAI-compatible adapter (OpenAI, local Ollama); MCP not implemented (documented decision). Real APIs not exercised (mocked) |
 | 7 — Backup and hybrid sync | Done (CI + emulator launch) | PR #8. GitHub repository sync chosen by the owner (docs/SYNC.md). Fake-API tests plus a real GitHub API check on a temporary branch (in-memory vault, not a phone) |
-| 8 — Release hardening | In progress | Expanded emulator tests, optional stable signing via secrets, versionCode from CI run, docs/RELEASE.md. Real-device checklist not yet run |
+| 8 — Release hardening | Done for CI + emulator; real-device check pending | PR #9. Emulator flow tests (4/4 pass), optional stable signing via secrets, signer reported in CI summary, versionCode from CI run, docs/RELEASE.md. The owner still needs to run the real-phone checklist (docs/TESTING.md) |
 
 Testing levels are reported separately: unit/widget tests (CI), CI APK build,
 emulator tests, and real-device tests. A phase is not marked "Done" for
@@ -22,7 +22,7 @@ behavior that was only compiled.
 | --- | --- |
 | Unit + widget tests | Run in CI on every PR (205+ tests) |
 | Release APK build | Built in CI on every PR; artifact `emerald-android-apk` |
-| Emulator (API 34) | Launch, navigation, real SAF channel restore, core note flows with an in-memory vault, Keystore secure storage, app-private files |
+| Emulator (API 34) | Launch, navigation, real SAF channel restore, core note flows with an in-memory vault, Keystore secure storage, app-private files (4 tests, all passing in CI) |
 | Real AI providers | Not called (no keys, no paid usage); mocked against official request/response shapes |
 | Real GitHub API | Sync client and engine checked on a temporary branch (deleted afterwards) |
 | Real phone | **Not done.** Run the checklist in docs/TESTING.md and record results here |
