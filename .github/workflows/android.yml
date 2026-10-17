@@ -27,6 +27,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # commit count is used as versionCode
 
       - name: Set up Java
         uses: actions/setup-java@v6
@@ -73,9 +75,9 @@ jobs:
           EMERALD_KEYSTORE_PASSWORD: ${{ secrets.EMERALD_KEYSTORE_PASSWORD }}
           EMERALD_KEY_ALIAS: ${{ secrets.EMERALD_KEY_ALIAS }}
           EMERALD_KEY_PASSWORD: ${{ secrets.EMERALD_KEY_PASSWORD }}
-        # Run number as versionCode so newer CI builds can upgrade older ones
-        # (when signed with the same key).
-        run: flutter build apk --release --build-number=${{ github.run_number }}
+        # Commit count as versionCode (same scheme as the Release workflow) so
+        # newer builds can upgrade older ones when signed with the same key.
+        run: flutter build apk --release --build-number=$(git rev-list --count HEAD)
 
       - name: Report signing status
         run: |
