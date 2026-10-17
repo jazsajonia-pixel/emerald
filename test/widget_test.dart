@@ -64,7 +64,8 @@ void main() {
     await _pumpAt(tester, phone);
     await tester.tap(find.text('Open Graph'));
     await tester.pumpAndSettle();
-    expect(find.text('No graph yet'), findsOneWidget);
+    expect(find.text('No vault selected'), findsOneWidget);
+    expect(find.textContaining('see how your notes connect'), findsOneWidget);
   });
 
   testWidgets('wide screens use a navigation rail', (tester) async {

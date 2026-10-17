@@ -6,7 +6,7 @@
 | 1 — Shell and navigation | Done | Widget-tested (PR #2); launch verified on emulator from Phase 2 CI |
 | 2 — Safe Markdown vault access | Done (CI + emulator) | PR #3. Real-folder picker flow still needs the manual device checklist |
 | 3 — Links, backlinks, search | In progress | Parser, resolver, in-memory index, search, backlinks, orphans |
-| 4 — Interactive graph | Not started | |
+| 4 — Interactive graph | In progress | Custom force layout, global/local, highlight, filters |
 | 5 — AI foundation and safe tools | Not started | |
 | 6 — Additional providers / agents | Not started | |
 | 7 — Backup and hybrid sync | Not started | |
