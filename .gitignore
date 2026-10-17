@@ -54,5 +54,5 @@ key.properties
 .env
 .env.*
 !.env.example
-vault/
-*.vault/
+/vault/
+/*.vault/

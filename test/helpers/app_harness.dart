@@ -1,0 +1,28 @@
+import 'package:emerald/app/app.dart';
+import 'package:emerald/data/memory_vault_storage.dart';
+import 'package:emerald/features/vault/vault_controller.dart';
+import 'package:flutter/widgets.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+Future<void> pumpEmerald(
+  WidgetTester tester, {
+  MemoryVaultStorage? storage,
+  Size size = const Size(360, 740),
+  double textScale = 1.0,
+}) async {
+  tester.view.physicalSize = size;
+  tester.view.devicePixelRatio = 1.0;
+  tester.platformDispatcher.textScaleFactorTestValue = textScale;
+  addTearDown(tester.view.reset);
+  addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        vaultStorageProvider.overrideWithValue(storage ?? MemoryVaultStorage()),
+      ],
+      child: const EmeraldApp(),
+    ),
+  );
+  await tester.pumpAndSettle();
+}

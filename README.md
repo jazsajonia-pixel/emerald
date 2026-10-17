@@ -9,6 +9,8 @@ stay compatible with Obsidian and other editors.
 - Roadmap and acceptance criteria: [`DEVELOPMENT_PHASES.md`](DEVELOPMENT_PHASES.md)
 - Architecture: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
 - Status of each phase: [`docs/STATUS.md`](docs/STATUS.md)
+- Vault storage, safety and limitations: [`docs/STORAGE.md`](docs/STORAGE.md)
+- Testing levels and manual device checklist: [`docs/TESTING.md`](docs/TESTING.md)
 
 ## Project facts
 
@@ -55,7 +57,7 @@ No keystore or signing credentials are stored in this repository.
 
 ```sh
 flutter pub get
-dart format --output=none --set-exit-if-changed lib test
+dart format --output=none --set-exit-if-changed lib test integration_test
 flutter analyze
 flutter test
 flutter build apk --release

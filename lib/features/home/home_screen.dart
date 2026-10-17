@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/home_shell.dart';
+import '../vault/vault_controller.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key, required this.onNavigate});
 
   final ValueChanged<AppDestination> onNavigate;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final vault = ref.watch(vaultControllerProvider);
     final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(title: const Text('Emerald')),
@@ -23,11 +26,21 @@ class HomeScreen extends StatelessWidget {
           Card(
             child: ListTile(
               leading: const Icon(Icons.folder_outlined),
-              title: const Text('No vault selected'),
-              subtitle: const Text(
-                'Vault selection arrives in Phase 2. Your notes will stay '
-                'as ordinary .md files in a folder you choose.',
-              ),
+              title: Text(switch (vault) {
+                VaultReady(:final vault) => vault.name,
+                VaultLoading() => 'Opening vault…',
+                VaultAccessLost() => 'Vault access was lost',
+                VaultFailure() => 'Vault could not be opened',
+                VaultNone() => 'No vault selected',
+              }),
+              subtitle: Text(switch (vault) {
+                VaultReady() => '${vault.notes.length} notes',
+                VaultNone() =>
+                  'Choose a folder of Markdown notes in Brain. Your notes '
+                      'stay ordinary .md files.',
+                _ => 'Open Brain for details.',
+              }),
+              trailing: const Icon(Icons.chevron_right),
               onTap: () => onNavigate(AppDestination.notes),
             ),
           ),
