@@ -22,10 +22,17 @@ import 'package:integration_test/integration_test.dart';
 
 const _vault = VaultHandle(id: 'memory://device-vault', name: 'Device Vault');
 
+/// Taps a top-level destination (bottom bar on phones, rail on wide screens).
 Future<void> _nav(WidgetTester tester, String label) async {
-  await tester.tap(
-    find.descendant(of: find.byType(NavigationBar), matching: find.text(label)),
+  final bar = find.descendant(
+    of: find.byType(NavigationBar),
+    matching: find.text(label),
   );
+  final rail = find.descendant(
+    of: find.byType(NavigationRail),
+    matching: find.text(label),
+  );
+  await tester.tap(bar.evaluate().isNotEmpty ? bar : rail);
   await tester.pumpAndSettle();
 }
 
@@ -43,7 +50,7 @@ void main() {
     tester,
   ) async {
     final storage = MemoryVaultStorage(
-      files: {'Home.md': '# Home\n\nStart here.\n'},
+      files: {'Garden.md': '# Garden\n\nStart here.\n'},
       vaultToPick: _vault,
       remembered: _vault,
     );
@@ -58,21 +65,21 @@ void main() {
     );
     await tester.pumpAndSettle();
     await _nav(tester, 'Brain');
-    expect(find.text('Home'), findsOneWidget);
+    expect(find.text('Garden'), findsOneWidget);
 
-    // Create a note that links to Home.
+    // Create a note that links to Garden.
     await _tap(tester, find.text('New note'));
     await tester.enterText(find.byType(TextField), 'Device note');
     await _tap(tester, find.text('Create'));
     await tester.enterText(
       find.byKey(const Key('note-editor')),
-      'Written on Android. See [[Home]].\n',
+      'Written on Android. See [[Garden]].\n',
     );
     await tester.pump();
     await _tap(tester, find.byTooltip('Save'));
     expect(
       utf8.decode(storage.bytesOf('Device note.md')!),
-      'Written on Android. See [[Home]].\n',
+      'Written on Android. See [[Garden]].\n',
     );
     await tester.pageBack();
     await tester.pumpAndSettle();
@@ -91,8 +98,8 @@ void main() {
     await tester.pageBack();
     await tester.pumpAndSettle();
 
-    // Backlinks of Home include the new note.
-    await _tap(tester, find.text('Home'));
+    // Backlinks of Garden include the new note.
+    await _tap(tester, find.text('Garden'));
     await _tap(tester, find.byTooltip('Note actions').last);
     await _tap(tester, find.text('Links and backlinks'));
     expect(find.text('Backlinks (1)'), findsOneWidget);
