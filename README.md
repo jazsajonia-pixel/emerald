@@ -14,6 +14,7 @@ stay compatible with Obsidian and other editors.
 - Graph: [`docs/GRAPH.md`](docs/GRAPH.md)
 - AI (optional, bring your own key): [`docs/AI.md`](docs/AI.md)
 - GitHub sync (optional): [`docs/SYNC.md`](docs/SYNC.md)
+- Release, signing, permissions, upgrades: [`docs/RELEASE.md`](docs/RELEASE.md)
 - Testing levels and manual device checklist: [`docs/TESTING.md`](docs/TESTING.md)
 
 ## Project facts
@@ -47,15 +48,20 @@ Artifacts are kept for 30 days.
 
 ### Signing status
 
-The CI APK is a **release-mode build signed with the Android debug key**
-generated on the CI runner. It is fine for personal testing but it is **not a
-production-signed release**. Because every runner may generate a different
-debug key, Android may refuse to install a newer CI APK over an older one
-("App not installed" / signature conflict). If that happens, uninstall Emerald
-first — your notes live in your own vault folder and are not deleted by
-uninstalling, but app settings (such as the remembered vault) are.
+Unless the repository owner configures a release keystore as GitHub secrets
+(see [`docs/RELEASE.md`](docs/RELEASE.md)), the CI APK is a **release-mode
+build signed with the Android debug key** generated on the CI runner. It is
+fine for personal testing but it is **not a production-signed release**. The
+CI run summary states which key was used. Because every runner may generate a
+different debug key, Android may refuse to install a newer CI APK over an
+older one ("App not installed" / signature conflict). If that happens,
+uninstall Emerald first — your notes live in your own vault folder and are not
+deleted by uninstalling, but app settings (remembered vault, AI keys, GitHub
+token) are.
 
 No keystore or signing credentials are stored in this repository.
+
+Permissions, upgrades, and the release checklist: [`docs/RELEASE.md`](docs/RELEASE.md).
 
 ## Build locally
 
@@ -65,6 +71,8 @@ dart format --output=none --set-exit-if-changed lib test integration_test
 flutter analyze
 flutter test
 flutter build apk --release
+# on-device tests (needs a running emulator or connected phone):
+flutter test integration_test
 # output: build/app/outputs/flutter-apk/app-release.apk
 ```
 

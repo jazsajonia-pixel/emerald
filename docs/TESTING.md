@@ -4,7 +4,7 @@
 | --- | --- | --- |
 | Unit + widget tests | `flutter test` (Dart logic, UI flows with an in-memory vault) | CI job "Format, analyze, test, build APK" |
 | Release build | `flutter build apk --release` | same CI job; APK uploaded as artifact |
-| Emulator smoke test | `flutter test integration_test` on an API 34 emulator: launch, real SAF channel restore, navigation | CI job "Emulator smoke test (API 34)" |
+| Emulator tests | `flutter test integration_test` on an API 34 emulator: launch, real SAF channel restore, navigation; create/link/save/reopen/search/backlinks/graph flow (in-memory vault); Android Keystore secure storage; app-private history and sync-state files through the real Kotlin channel | CI job "Emulator smoke test (API 34)" |
 | Real device | Manual checklist below | Owner's phone |
 
 The emulator test cannot operate the system folder picker, so choosing a
