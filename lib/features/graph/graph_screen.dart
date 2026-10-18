@@ -30,6 +30,7 @@ class _GraphScreenState extends ConsumerState<GraphScreen> {
   bool _showIsolated = true;
   bool _searching = false;
   bool _rotating = true;
+  bool _threeDimensional = true;
   final _query = TextEditingController();
 
   VaultIndex? _builtFrom;
@@ -188,6 +189,14 @@ class _GraphScreenState extends ConsumerState<GraphScreen> {
               : Text(title, overflow: TextOverflow.ellipsis),
           actions: [
             IconButton(
+              tooltip: _threeDimensional
+                  ? 'Switch to 2D graph'
+                  : 'Switch to 3D graph',
+              icon: Icon(_threeDimensional ? Icons.view_in_ar : Icons.grid_on),
+              onPressed: () =>
+                  setState(() => _threeDimensional = !_threeDimensional),
+            ),
+            IconButton(
               tooltip: _rotating
                   ? 'Pause graph rotation'
                   : 'Resume graph rotation',
@@ -313,6 +322,7 @@ class _GraphScreenState extends ConsumerState<GraphScreen> {
                   query: _query.text,
                   pinnedPaths: _pinnedPaths,
                   rotating: _rotating,
+                  threeDimensional: _threeDimensional,
                   onNodeTap: (p) => _showNodeActions(p, data),
                   onNodeLongPress: _openLocal,
                 ),
@@ -323,6 +333,8 @@ class _GraphScreenState extends ConsumerState<GraphScreen> {
           matches: matches,
           local: _center != null,
           pinned: _pinnedPaths.length,
+          threeDimensional: _threeDimensional,
+          rotating: _rotating,
         ),
       ],
     );
@@ -336,6 +348,8 @@ class _Legend extends StatelessWidget {
     required this.matches,
     required this.local,
     required this.pinned,
+    required this.threeDimensional,
+    required this.rotating,
   });
 
   final int nodes;
@@ -343,6 +357,8 @@ class _Legend extends StatelessWidget {
   final int? matches;
   final bool local;
   final int pinned;
+  final bool threeDimensional;
+  final bool rotating;
 
   @override
   Widget build(BuildContext context) {
@@ -369,6 +385,12 @@ class _Legend extends StatelessWidget {
               '$nodes notes · $edges links'
               '${matches == null ? '' : ' · $matches highlighted'}',
               style: small,
+            ),
+            Text(
+              threeDimensional
+                  ? '3D perspective${rotating ? ' · auto-rotating' : ' · paused'}'
+                  : '2D flat view',
+              style: small?.copyWith(color: scheme.onSurfaceVariant),
             ),
             const SizedBox(height: 4),
             Wrap(

@@ -72,6 +72,28 @@ void main() {
     expect(find.byTooltip('Pause graph rotation'), findsOneWidget);
   });
 
+  testWidgets('graph can switch between perspective 3D and flat 2D', (
+    tester,
+  ) async {
+    await pumpEmerald(tester, storage: _storage());
+    await _graph(tester);
+    expect(find.text('3D perspective · auto-rotating'), findsOneWidget);
+    expect(
+      tester.widget<GraphView>(find.byType(GraphView)).threeDimensional,
+      isTrue,
+    );
+    await tester.tap(find.byTooltip('Switch to 2D graph'));
+    await tester.pumpAndSettle();
+    expect(find.text('2D flat view'), findsOneWidget);
+    expect(
+      tester.widget<GraphView>(find.byType(GraphView)).threeDimensional,
+      isFalse,
+    );
+    await tester.tap(find.byTooltip('Switch to 3D graph'));
+    await tester.pumpAndSettle();
+    expect(find.text('3D perspective · auto-rotating'), findsOneWidget);
+  });
+
   testWidgets('tapping a node offers actions and opens the selected note', (
     tester,
   ) async {

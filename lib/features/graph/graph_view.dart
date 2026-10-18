@@ -17,6 +17,7 @@ class GraphView extends StatefulWidget {
     this.query = '',
     this.pinnedPaths = const {},
     this.rotating = true,
+    this.threeDimensional = true,
     required this.onNodeTap,
     this.onNodeLongPress,
   });
@@ -26,6 +27,7 @@ class GraphView extends StatefulWidget {
   final String query;
   final Set<String> pinnedPaths;
   final bool rotating;
+  final bool threeDimensional;
   final ValueChanged<String> onNodeTap;
   final ValueChanged<String>? onNodeLongPress;
 
@@ -58,6 +60,7 @@ class _GraphViewState extends State<GraphView>
     final shouldAnimate =
         !MediaQuery.of(context).disableAnimations &&
         widget.rotating &&
+        widget.threeDimensional &&
         widget.data.nodes.length <= 600;
     if (shouldAnimate && _motion == null) {
       _motion = AnimationController(
@@ -109,9 +112,8 @@ class _GraphViewState extends State<GraphView>
   int? _hit(Offset local) {
     final scale = _transform.value.getMaxScaleOnAxis();
     // GestureDetector reports coordinates in the InteractiveViewer child.
-    // Invert each node's perspective projection before testing its layout
-    // position. The raw-position pass is a forgiving fallback for a 48 dp
-    // target during a zoom/pan transition.
+    // Hit-test against the currently rendered positions so taps stay aligned
+    // while the graph rotates or is shown in flat 2D mode.
     final origin = Offset(widget.layout.width / 2, widget.layout.height / 2);
     final rotation = (_motion?.value ?? 0) * math.pi * 2;
     final radius = math.max(18, 24 / scale).toDouble();
@@ -119,12 +121,15 @@ class _GraphViewState extends State<GraphView>
     var bestDistance = double.infinity;
     for (var i = 0; i < widget.data.nodes.length; i++) {
       final depth = _projection.depthFor(i, widget.data.nodes[i].degree);
-      final projected = _projection.projectRotating(
-        Offset(widget.layout.x(i), widget.layout.y(i)),
-        origin: origin,
-        depth: depth,
-        rotation: rotation,
-      );
+      final point = Offset(widget.layout.x(i), widget.layout.y(i));
+      final projected = widget.threeDimensional
+          ? _projection.projectRotating(
+              point,
+              origin: origin,
+              depth: depth,
+              rotation: rotation,
+            )
+          : point;
       final projectedDistance = (projected - local).distance;
       if (projectedDistance <= radius && projectedDistance < bestDistance) {
         bestDistance = projectedDistance;
@@ -181,6 +186,7 @@ class _GraphViewState extends State<GraphView>
                 query: widget.query.trim().toLowerCase(),
                 pinnedPaths: widget.pinnedPaths,
                 rotating: widget.rotating,
+                threeDimensional: widget.threeDimensional,
                 scheme: Theme.of(context).colorScheme,
                 transform: _transform,
                 labels: _labels,
@@ -205,6 +211,7 @@ class _GraphPainter extends CustomPainter {
     required this.query,
     required this.pinnedPaths,
     required this.rotating,
+    required this.threeDimensional,
     required this.scheme,
     required this.transform,
     required this.labels,
@@ -224,6 +231,7 @@ class _GraphPainter extends CustomPainter {
   final String query;
   final Set<String> pinnedPaths;
   final bool rotating;
+  final bool threeDimensional;
   final ColorScheme scheme;
   final TransformationController transform;
   final Map<int, TextPainter> labels;
@@ -240,14 +248,19 @@ class _GraphPainter extends CustomPainter {
 
   double _depth(int i) => projection.depthFor(i, data.nodes[i].degree);
 
-  double _rotation() => rotating ? (motion?.value ?? 0) * math.pi * 2 : 0;
+  double _rotation() =>
+      rotating && threeDimensional ? (motion?.value ?? 0) * math.pi * 2 : 0;
 
-  Offset _point(int i) => projection.projectRotating(
-    Offset(layout.x(i), layout.y(i)),
-    origin: _origin(),
-    depth: _depth(i),
-    rotation: _rotation(),
-  );
+  Offset _point(int i) {
+    final point = Offset(layout.x(i), layout.y(i));
+    if (!threeDimensional) return point;
+    return projection.projectRotating(
+      point,
+      origin: _origin(),
+      depth: _depth(i),
+      rotation: _rotation(),
+    );
+  }
 
   Color _nodeColor(int i) {
     if (data.nodes[i].isolated) return const Color(0xFFFFC857);
