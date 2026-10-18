@@ -15,7 +15,9 @@ void main() {
   testWidgets('app launches, restores (no) vault via SAF, navigates', (
     tester,
   ) async {
-    await tester.pumpWidget(const ProviderScope(child: EmeraldApp()));
+    await tester.pumpWidget(
+      const ProviderScope(child: EmeraldApp(reduceMotion: true)),
+    );
     await tester.pumpAndSettle(const Duration(seconds: 2));
 
     // Fresh install: the Kotlin channel reports no remembered vault.

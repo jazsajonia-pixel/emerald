@@ -16,6 +16,7 @@ class GraphView extends StatefulWidget {
     required this.layout,
     this.query = '',
     this.pinnedPaths = const {},
+    this.rotating = true,
     required this.onNodeTap,
     this.onNodeLongPress,
   });
@@ -24,6 +25,7 @@ class GraphView extends StatefulWidget {
   final GraphLayout layout;
   final String query;
   final Set<String> pinnedPaths;
+  final bool rotating;
   final ValueChanged<String> onNodeTap;
   final ValueChanged<String>? onNodeLongPress;
 
@@ -55,12 +57,13 @@ class _GraphViewState extends State<GraphView>
   void _syncMotion() {
     final shouldAnimate =
         !MediaQuery.of(context).disableAnimations &&
+        widget.rotating &&
         widget.data.nodes.length <= 600;
     if (shouldAnimate && _motion == null) {
       _motion = AnimationController(
         vsync: this,
-        duration: const Duration(milliseconds: 1500),
-      )..forward();
+        duration: const Duration(seconds: 32),
+      )..repeat();
     } else if (!shouldAnimate && _motion != null) {
       _motion!.dispose();
       _motion = null;
@@ -110,27 +113,21 @@ class _GraphViewState extends State<GraphView>
     // position. The raw-position pass is a forgiving fallback for a 48 dp
     // target during a zoom/pan transition.
     final origin = Offset(widget.layout.width / 2, widget.layout.height / 2);
+    final rotation = (_motion?.value ?? 0) * math.pi * 2;
     final radius = math.max(18, 24 / scale).toDouble();
     int? best;
     var bestDistance = double.infinity;
     for (var i = 0; i < widget.data.nodes.length; i++) {
       final depth = _projection.depthFor(i, widget.data.nodes[i].degree);
-      final projected = _projection.project(
+      final projected = _projection.projectRotating(
         Offset(widget.layout.x(i), widget.layout.y(i)),
         origin: origin,
         depth: depth,
-      );
-      final inverse = _projection.unproject(
-        local,
-        origin: origin,
-        depth: depth,
+        rotation: rotation,
       );
       final projectedDistance = (projected - local).distance;
-      final layoutDistance =
-          (Offset(widget.layout.x(i), widget.layout.y(i)) - inverse).distance;
-      final distance = math.min(projectedDistance, layoutDistance);
-      if (distance <= radius && distance < bestDistance) {
-        bestDistance = distance;
+      if (projectedDistance <= radius && projectedDistance < bestDistance) {
+        bestDistance = projectedDistance;
         best = i;
       }
     }
@@ -183,6 +180,7 @@ class _GraphViewState extends State<GraphView>
                 layout: widget.layout,
                 query: widget.query.trim().toLowerCase(),
                 pinnedPaths: widget.pinnedPaths,
+                rotating: widget.rotating,
                 scheme: Theme.of(context).colorScheme,
                 transform: _transform,
                 labels: _labels,
@@ -206,6 +204,7 @@ class _GraphPainter extends CustomPainter {
     required this.layout,
     required this.query,
     required this.pinnedPaths,
+    required this.rotating,
     required this.scheme,
     required this.transform,
     required this.labels,
@@ -224,6 +223,7 @@ class _GraphPainter extends CustomPainter {
   final GraphLayout layout;
   final String query;
   final Set<String> pinnedPaths;
+  final bool rotating;
   final ColorScheme scheme;
   final TransformationController transform;
   final Map<int, TextPainter> labels;
@@ -240,11 +240,27 @@ class _GraphPainter extends CustomPainter {
 
   double _depth(int i) => projection.depthFor(i, data.nodes[i].degree);
 
-  Offset _point(int i) => projection.project(
+  double _rotation() => rotating ? (motion?.value ?? 0) * math.pi * 2 : 0;
+
+  Offset _point(int i) => projection.projectRotating(
     Offset(layout.x(i), layout.y(i)),
     origin: _origin(),
     depth: _depth(i),
+    rotation: _rotation(),
   );
+
+  Color _nodeColor(int i) {
+    if (data.nodes[i].isolated) return const Color(0xFFFFC857);
+    const palette = [
+      Color(0xFF49E3A4),
+      Color(0xFF45C9F5),
+      Color(0xFFA98BFF),
+      Color(0xFFFF7FA8),
+      Color(0xFFFFA75E),
+      Color(0xFF61E0D4),
+    ];
+    return palette[(i + data.nodes[i].degree) % palette.length];
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -255,28 +271,31 @@ class _GraphPainter extends CustomPainter {
     final pulse = motion?.value ?? 0;
 
     final edgePaint = Paint()
-      ..color = scheme.primary.withValues(alpha: searching ? 0.15 : 0.45)
-      ..strokeWidth = stroke
-      ..style = PaintingStyle.stroke;
+      ..strokeWidth = stroke * 1.65
+      ..strokeCap = StrokeCap.round;
     final inferredPaint = Paint()
-      ..color = scheme.tertiary.withValues(alpha: 0.6)
+      ..color = const Color(0xFFB58BFF).withValues(alpha: 0.8)
       ..strokeWidth = stroke
       ..style = PaintingStyle.stroke;
-    final explicitPath = Path();
     for (final e in data.edges) {
       final a = _point(e.source);
       final b = _point(e.target);
       if (e.kind == EdgeKind.explicit) {
-        explicitPath
-          ..moveTo(a.dx, a.dy)
-          ..lineTo(b.dx, b.dy);
+        final edgeColor = Color.lerp(
+          _nodeColor(e.source),
+          _nodeColor(e.target),
+          0.5,
+        )!;
+        edgePaint.color = edgeColor.withValues(
+          alpha: searching ? 0.18 : 0.58 + math.sin(pulse * math.pi * 2) * 0.12,
+        );
+        canvas.drawLine(a, b, edgePaint);
       } else {
         _dashed(canvas, a, b, inferredPaint, 6 / scale.clamp(0.4, 2));
       }
     }
-    canvas.drawPath(explicitPath, edgePaint);
 
-    final isolatedFill = Paint()..color = scheme.surfaceContainerHighest;
+    final isolatedFill = Paint()..color = const Color(0xFFFFC857);
     final isolatedRing = Paint()
       ..color = scheme.outline
       ..style = PaintingStyle.stroke
@@ -305,6 +324,7 @@ class _GraphPainter extends CustomPainter {
       final c = _point(i);
       final depth = _depth(i);
       final depthScale = projection.scaleForDepth(depth);
+      final depthMix = (depth / 140).clamp(0.0, 1.0);
       final r = GraphView.nodeRadius(n) * depthScale;
       final hit = _matches(n);
       final isEmphasized = i == emphasized;
@@ -312,8 +332,7 @@ class _GraphPainter extends CustomPainter {
       final shimmer = motion == null
           ? 0.0
           : (math.sin(pulse * math.pi * 2 + i * 0.37) + 1) / 2;
-      final depthMix = (depth / 140).clamp(0.0, 1.0);
-      final linkedFill = Color.lerp(scheme.primary, scheme.tertiary, depthMix)!;
+      final linkedFill = _nodeColor(i);
       final nodeFill = searching && !hit
           ? linkedFill.withValues(alpha: 0.25)
           : linkedFill.withValues(alpha: 0.82 + shimmer * 0.12);

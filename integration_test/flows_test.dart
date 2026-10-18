@@ -60,7 +60,7 @@ void main() {
           vaultStorageProvider.overrideWithValue(storage),
           secretStoreProvider.overrideWithValue(MemorySecretStore()),
         ],
-        child: const EmeraldApp(),
+        child: const EmeraldApp(reduceMotion: true),
       ),
     );
     await tester.pumpAndSettle();

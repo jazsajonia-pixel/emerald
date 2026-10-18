@@ -1,5 +1,6 @@
 import 'package:emerald/data/memory_vault_storage.dart';
 import 'package:emerald/data/vault_storage.dart';
+import 'package:emerald/features/graph/graph_layout.dart';
 import 'package:emerald/features/graph/graph_screen.dart';
 import 'package:emerald/features/graph/graph_view.dart';
 import 'package:flutter/material.dart';
@@ -37,7 +38,14 @@ Offset _nodePosition(WidgetTester tester, String title) {
   final i = view.data.nodes.indexWhere((n) => n.title == title);
   expect(i, isNot(-1), reason: 'node $title');
   final box = tester.renderObject<RenderBox>(find.byKey(GraphView.canvasKey));
-  return box.localToGlobal(Offset(view.layout.x(i), view.layout.y(i)));
+  final projection = const GraphProjection();
+  final point = projection.projectRotating(
+    Offset(view.layout.x(i), view.layout.y(i)),
+    origin: Offset(view.layout.width / 2, view.layout.height / 2),
+    depth: projection.depthFor(i, view.data.nodes[i].degree),
+    rotation: 0,
+  );
+  return box.localToGlobal(point);
 }
 
 void main() {
@@ -48,7 +56,20 @@ void main() {
     await _graph(tester);
     expect(find.byType(GraphView), findsOneWidget);
     expect(find.text('4 notes · 2 links'), findsOneWidget);
-    expect(find.textContaining('AI-suggested links: off'), findsOneWidget);
+    expect(find.textContaining('Node colors show groups'), findsOneWidget);
+    expect(find.textContaining('violet dashes = inferred'), findsOneWidget);
+  });
+
+  testWidgets('graph auto-rotation can be paused and resumed', (tester) async {
+    await pumpEmerald(tester, storage: _storage());
+    await _graph(tester);
+    expect(find.byTooltip('Pause graph rotation'), findsOneWidget);
+    await tester.tap(find.byTooltip('Pause graph rotation'));
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Resume graph rotation'), findsOneWidget);
+    await tester.tap(find.byTooltip('Resume graph rotation'));
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Pause graph rotation'), findsOneWidget);
   });
 
   testWidgets('tapping a node offers actions and opens the selected note', (

@@ -6,7 +6,10 @@ import 'home_shell.dart';
 import 'theme.dart';
 
 class EmeraldApp extends ConsumerWidget {
-  const EmeraldApp({super.key});
+  const EmeraldApp({super.key, this.reduceMotion = false});
+
+  /// Test harnesses can disable ambient motion so pumpAndSettle can complete.
+  final bool reduceMotion;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -19,6 +22,10 @@ class EmeraldApp extends ConsumerWidget {
       theme: EmeraldTheme.dark(),
       darkTheme: EmeraldTheme.dark(),
       themeMode: ThemeMode.dark,
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(context).copyWith(disableAnimations: reduceMotion),
+        child: child!,
+      ),
       home: const HomeShell(),
     );
   }

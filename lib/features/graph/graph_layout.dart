@@ -31,11 +31,11 @@ class GraphLayout {
   }
 }
 
-/// A small perspective projection for the graph's 2.5D presentation.
+/// Perspective projection helpers for Emerald's animated 3D graph view.
 ///
-/// The force layout remains a deterministic 2D simulation. This projection
-/// adds a shallow, deterministic depth plane for painting and hit testing;
-/// it is deliberately not a full 3D scene or camera.
+/// The force layout stays deterministic and inexpensive in 2D. The graph view
+/// lifts its nodes into a shallow 3D volume and rotates that volume before
+/// projecting it onto the canvas, including perspective foreshortening.
 class GraphProjection {
   const GraphProjection({this.focalLength = 2200, this.nearPlane = 0.25});
 
@@ -68,6 +68,31 @@ class GraphProjection {
   Offset project(Offset point, {required Offset origin, double depth = 0}) {
     final s = scaleForDepth(depth);
     final projected = origin + (point - origin) * s;
+    return _finite(projected, fallback: origin);
+  }
+
+  /// Rotates a node around the vertical axis, tilts the resulting 3D point,
+  /// then projects it using perspective. [rotation] is in radians.
+  Offset projectRotating(
+    Offset point, {
+    required Offset origin,
+    required double depth,
+    required double rotation,
+    double tilt = 0.18,
+  }) {
+    final dx = point.dx - origin.dx;
+    final dy = point.dy - origin.dy;
+    final z = depth - 78;
+    final yawX = dx * math.cos(rotation) + z * math.sin(rotation);
+    final yawZ = -dx * math.sin(rotation) + z * math.cos(rotation);
+    final screenY = dy * math.cos(tilt) - yawZ * math.sin(tilt);
+    final cameraZ = dy * math.sin(tilt) + yawZ * math.cos(tilt);
+    final perspective = (focalLength / (focalLength + cameraZ)).clamp(
+      0.45,
+      1.65,
+    );
+    final projected =
+        origin + Offset(yawX * perspective, screenY * perspective);
     return _finite(projected, fallback: origin);
   }
 

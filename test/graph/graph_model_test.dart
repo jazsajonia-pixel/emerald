@@ -169,6 +169,26 @@ void main() {
       },
     );
 
+    test('rotating 3D projection moves nodes across the canvas', () {
+      const projection = GraphProjection();
+      const origin = Offset(300, 240);
+      const point = Offset(520, 110);
+      final first = projection.projectRotating(
+        point,
+        origin: origin,
+        depth: 106,
+        rotation: 0,
+      );
+      final rotated = projection.projectRotating(
+        point,
+        origin: origin,
+        depth: 106,
+        rotation: math.pi / 2,
+      );
+      expect((rotated - first).distance, greaterThan(20));
+      expect(rotated.dx.isFinite && rotated.dy.isFinite, isTrue);
+    });
+
     test('1500-node vault lays out in reasonable time', () {
       final rnd = math.Random(1);
       final edges = Int32List(3000);

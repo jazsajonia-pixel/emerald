@@ -29,6 +29,7 @@ class _GraphScreenState extends ConsumerState<GraphScreen> {
   int _depth = 1;
   bool _showIsolated = true;
   bool _searching = false;
+  bool _rotating = true;
   final _query = TextEditingController();
 
   VaultIndex? _builtFrom;
@@ -187,6 +188,17 @@ class _GraphScreenState extends ConsumerState<GraphScreen> {
               : Text(title, overflow: TextOverflow.ellipsis),
           actions: [
             IconButton(
+              tooltip: _rotating
+                  ? 'Pause graph rotation'
+                  : 'Resume graph rotation',
+              icon: Icon(
+                _rotating
+                    ? Icons.motion_photos_auto
+                    : Icons.play_circle_outline,
+              ),
+              onPressed: () => setState(() => _rotating = !_rotating),
+            ),
+            IconButton(
               tooltip: _searching ? 'Stop highlighting' : 'Highlight notes',
               icon: Icon(_searching ? Icons.close : Icons.search),
               onPressed: () => setState(() {
@@ -300,6 +312,7 @@ class _GraphScreenState extends ConsumerState<GraphScreen> {
                   layout: layout,
                   query: _query.text,
                   pinnedPaths: _pinnedPaths,
+                  rotating: _rotating,
                   onNodeTap: (p) => _showNodeActions(p, data),
                   onNodeLongPress: _openLocal,
                 ),
@@ -363,20 +376,13 @@ class _Legend extends StatelessWidget {
               runSpacing: 4,
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
+                Text('Node colors show groups', style: small),
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    dot(scheme.primary),
+                    dot(const Color(0xFFFFC857), ring: scheme.outline),
                     const SizedBox(width: 4),
-                    Text('Linked', style: small),
-                  ],
-                ),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    dot(scheme.surfaceContainerHighest, ring: scheme.outline),
-                    const SizedBox(width: 4),
-                    Text('Unlinked', style: small),
+                    Text('Unlinked note', style: small),
                   ],
                 ),
                 if (local)
@@ -389,7 +395,7 @@ class _Legend extends StatelessWidget {
                     ],
                   ),
                 Text(
-                  'Lines = your explicit links. AI-suggested links: off.',
+                  'Solid lines = explicit · violet dashes = inferred',
                   style: small,
                 ),
               ],

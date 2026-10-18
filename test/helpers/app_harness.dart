@@ -31,7 +31,7 @@ Future<void> pumpEmerald(
         if (gitHubFactory != null)
           gitHubClientFactoryProvider.overrideWithValue(gitHubFactory),
       ],
-      child: const EmeraldApp(),
+      child: const EmeraldApp(reduceMotion: true),
     ),
   );
   await tester.pumpAndSettle();
