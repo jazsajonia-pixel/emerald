@@ -59,8 +59,8 @@ class _GraphViewState extends State<GraphView>
     if (shouldAnimate && _motion == null) {
       _motion = AnimationController(
         vsync: this,
-        duration: const Duration(seconds: 18),
-      )..repeat();
+        duration: const Duration(milliseconds: 1500),
+      )..forward();
     } else if (!shouldAnimate && _motion != null) {
       _motion!.dispose();
       _motion = null;

@@ -23,6 +23,12 @@ void main() {
     );
 
     expect(find.bySemanticsLabel('Emerald'), findsOneWidget);
-    expect(find.byType(CustomPaint), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(EmeraldMark),
+        matching: find.byType(CustomPaint),
+      ),
+      findsOneWidget,
+    );
   });
 }
