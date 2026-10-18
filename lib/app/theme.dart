@@ -14,46 +14,47 @@ abstract final class EmeraldTheme {
   static const Color outlineVariant = Color(0xFF3C574B);
 
   static ThemeData dark() {
-    final scheme = ColorScheme.fromSeed(
-      seedColor: emerald,
-      brightness: Brightness.dark,
-    ).copyWith(
-      primary: emerald,
-      onPrimary: ink,
-      primaryContainer: const Color(0xFF075334),
-      onPrimaryContainer: const Color(0xFFA4F6C7),
-      secondary: const Color(0xFFA8D9C2),
-      onSecondary: const Color(0xFF11372A),
-      secondaryContainer: const Color(0xFF254F3D),
-      onSecondaryContainer: const Color(0xFFC2F4DC),
-      tertiary: const Color(0xFFB8D3C8),
-      onTertiary: const Color(0xFF20362D),
-      tertiaryContainer: const Color(0xFF385047),
-      onTertiaryContainer: const Color(0xFFD4EDE1),
-      error: const Color(0xFFFFB4AB),
-      onError: const Color(0xFF690005),
-      errorContainer: const Color(0xFF93000A),
-      onErrorContainer: const Color(0xFFFFDAD6),
-      background: surface,
-      surface: surface,
-      surfaceDim: ink,
-      surfaceBright: surfaceHighest,
-      surfaceContainerLowest: ink,
-      surfaceContainerLow: surfaceLow,
-      surfaceContainer: const Color(0xFF162A23),
-      surfaceContainerHigh: surfaceHigh,
-      surfaceContainerHighest: surfaceHighest,
-      surfaceTint: emerald,
-      onSurface: onSurface,
-      onSurfaceVariant: onSurfaceVariant,
-      outline: outline,
-      outlineVariant: outlineVariant,
-      shadow: Colors.black,
-      scrim: Colors.black,
-      inverseSurface: onSurface,
-      onInverseSurface: surface,
-      inversePrimary: const Color(0xFF006C46),
-    );
+    final scheme =
+        ColorScheme.fromSeed(
+          seedColor: emerald,
+          brightness: Brightness.dark,
+        ).copyWith(
+          primary: emerald,
+          onPrimary: ink,
+          primaryContainer: const Color(0xFF075334),
+          onPrimaryContainer: const Color(0xFFA4F6C7),
+          secondary: const Color(0xFFA8D9C2),
+          onSecondary: const Color(0xFF11372A),
+          secondaryContainer: const Color(0xFF254F3D),
+          onSecondaryContainer: const Color(0xFFC2F4DC),
+          tertiary: const Color(0xFFB8D3C8),
+          onTertiary: const Color(0xFF20362D),
+          tertiaryContainer: const Color(0xFF385047),
+          onTertiaryContainer: const Color(0xFFD4EDE1),
+          error: const Color(0xFFFFB4AB),
+          onError: const Color(0xFF690005),
+          errorContainer: const Color(0xFF93000A),
+          onErrorContainer: const Color(0xFFFFDAD6),
+          background: surface,
+          surface: surface,
+          surfaceDim: ink,
+          surfaceBright: surfaceHighest,
+          surfaceContainerLowest: ink,
+          surfaceContainerLow: surfaceLow,
+          surfaceContainer: const Color(0xFF162A23),
+          surfaceContainerHigh: surfaceHigh,
+          surfaceContainerHighest: surfaceHighest,
+          surfaceTint: emerald,
+          onSurface: onSurface,
+          onSurfaceVariant: onSurfaceVariant,
+          outline: outline,
+          outlineVariant: outlineVariant,
+          shadow: Colors.black,
+          scrim: Colors.black,
+          inverseSurface: onSurface,
+          onInverseSurface: surface,
+          inversePrimary: const Color(0xFF006C46),
+        );
     return ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
@@ -75,7 +76,7 @@ abstract final class EmeraldTheme {
         scrolledUnderElevation: 0,
         surfaceTintColor: Colors.transparent,
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: surfaceLow,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
@@ -96,7 +97,9 @@ abstract final class EmeraldTheme {
         iconTheme: WidgetStateProperty.resolveWith((states) {
           final selected = states.contains(WidgetState.selected);
           return IconThemeData(
-            color: selected ? scheme.onPrimaryContainer : scheme.onSurfaceVariant,
+            color: selected
+                ? scheme.onPrimaryContainer
+                : scheme.onSurfaceVariant,
           );
         }),
       ),

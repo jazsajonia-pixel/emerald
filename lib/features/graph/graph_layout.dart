@@ -1,6 +1,7 @@
 import 'dart:isolate';
 import 'dart:math' as math;
 import 'dart:typed_data';
+import 'dart:ui' show Offset;
 
 /// Result of a layout: node centres (x0, y0, x1, y1, …) inside a canvas of
 /// [width] × [height].

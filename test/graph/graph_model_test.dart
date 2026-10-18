@@ -146,26 +146,29 @@ void main() {
       expect(l.hitTest(50, 50, 10), isNull);
     });
 
-    test('2.5D projection is deterministic, invertible and finite near plane', () {
-      const projection = GraphProjection();
-      const origin = Offset(200, 160);
-      const point = Offset(420, 80);
-      final a = projection.project(point, origin: origin, depth: 64);
-      final b = projection.project(point, origin: origin, depth: 64);
-      expect(a, b);
-      final roundTrip = projection.unproject(a, origin: origin, depth: 64);
-      expect(roundTrip.dx, closeTo(point.dx, 0.0001));
-      expect(roundTrip.dy, closeTo(point.dy, 0.0001));
-      for (final depth in [0.0, -10.0, double.nan, double.infinity]) {
-        final projected = projection.project(
-          point,
-          origin: origin,
-          depth: depth,
-        );
-        expect(projected.dx.isFinite && projected.dy.isFinite, isTrue);
-        expect(projection.scaleForDepth(depth).isFinite, isTrue);
-      }
-    });
+    test(
+      '2.5D projection is deterministic, invertible and finite near plane',
+      () {
+        const projection = GraphProjection();
+        const origin = Offset(200, 160);
+        const point = Offset(420, 80);
+        final a = projection.project(point, origin: origin, depth: 64);
+        final b = projection.project(point, origin: origin, depth: 64);
+        expect(a, b);
+        final roundTrip = projection.unproject(a, origin: origin, depth: 64);
+        expect(roundTrip.dx, closeTo(point.dx, 0.0001));
+        expect(roundTrip.dy, closeTo(point.dy, 0.0001));
+        for (final depth in [0.0, -10.0, double.nan, double.infinity]) {
+          final projected = projection.project(
+            point,
+            origin: origin,
+            depth: depth,
+          );
+          expect(projected.dx.isFinite && projected.dy.isFinite, isTrue);
+          expect(projection.scaleForDepth(depth).isFinite, isTrue);
+        }
+      },
+    );
 
     test('1500-node vault lays out in reasonable time', () {
       final rnd = math.Random(1);

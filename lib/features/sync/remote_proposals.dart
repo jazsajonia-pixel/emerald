@@ -312,13 +312,12 @@ class RemoteProposalInbox {
   /// against its remote proposal SHA immediately before any local write. A
   /// failure does not stop later items; stale, invalid and already-applied
   /// items are never included in the batch.
-  Future<BatchApprovalResult> approveAllReady(
-    Iterable<InboxItem> items,
-  ) async {
+  Future<BatchApprovalResult> approveAllReady(Iterable<InboxItem> items) async {
     final all = items.toList();
     final ready = all
-        .where((item) =>
-            item.state == InboxItemState.ready && item.note != null)
+        .where(
+          (item) => item.state == InboxItemState.ready && item.note != null,
+        )
         .toList();
     final written = <String>[];
     final approved = <String>[];

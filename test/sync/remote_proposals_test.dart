@@ -352,44 +352,47 @@ void main() {
     expect(await local('Plan.md'), 'v1\n');
   });
 
-  test('batch approves ready items sequentially and reports partial failure', () async {
-    propose(
-      '1',
-      proposalJson(
-        id: '1',
-        kind: 'update',
-        path: 'Plan.md',
-        content: 'v2\n',
-        baseSha: sha('v1\n'),
-      ),
-    );
-    propose(
-      '2',
-      proposalJson(
-        id: '2',
-        kind: 'update',
-        path: 'Garden.md',
-        content: 'garden v2\n',
-        baseSha: sha('# Garden\n'),
-      ),
-    );
-    final items = await inbox.load();
-    gh.beforeDelete = (path) {
-      if (path == '.emerald/proposals/2.json') {
-        gh.set(path, '${gh.text(path)!} ');
-      }
-    };
+  test(
+    'batch approves ready items sequentially and reports partial failure',
+    () async {
+      propose(
+        '1',
+        proposalJson(
+          id: '1',
+          kind: 'update',
+          path: 'Plan.md',
+          content: 'v2\n',
+          baseSha: sha('v1\n'),
+        ),
+      );
+      propose(
+        '2',
+        proposalJson(
+          id: '2',
+          kind: 'update',
+          path: 'Garden.md',
+          content: 'garden v2\n',
+          baseSha: sha('# Garden\n'),
+        ),
+      );
+      final items = await inbox.load();
+      gh.beforeDelete = (path) {
+        if (path == '.emerald/proposals/2.json') {
+          gh.set(path, '${gh.text(path)!} ');
+        }
+      };
 
-    final result = await inbox.approveAllReady(items);
+      final result = await inbox.approveAllReady(items);
 
-    expect(result.attempted, 2);
-    expect(result.approved, ['Plan.md']);
-    expect(result.written, ['Plan.md', 'Garden.md']);
-    expect(result.failures.single.path, 'Garden.md');
-    expect(await local('Plan.md'), 'v2\n');
-    expect(await local('Garden.md'), 'garden v2\n');
-    expect(history.recorded, ['Plan.md=v1\n', 'Garden.md=# Garden\n']);
-  });
+      expect(result.attempted, 2);
+      expect(result.approved, ['Plan.md']);
+      expect(result.written, ['Plan.md', 'Garden.md']);
+      expect(result.failures.single.path, 'Garden.md');
+      expect(await local('Plan.md'), 'v2\n');
+      expect(await local('Garden.md'), 'garden v2\n');
+      expect(history.recorded, ['Plan.md=v1\n', 'Garden.md=# Garden\n']);
+    },
+  );
 
   test('a GitHub note never changes from the inbox (no note writes)', () async {
     propose(

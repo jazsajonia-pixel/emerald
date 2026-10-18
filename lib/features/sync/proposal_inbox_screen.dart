@@ -83,8 +83,9 @@ class _ProposalInboxScreenState extends ConsumerState<ProposalInboxScreen> {
     final items = _items;
     if (items == null) return;
     final ready = items
-        .where((item) =>
-            item.state == InboxItemState.ready && item.note != null)
+        .where(
+          (item) => item.state == InboxItemState.ready && item.note != null,
+        )
         .toList();
     if (ready.isEmpty) return;
     final confirmed = await showDialog<bool>(
@@ -140,9 +141,8 @@ class _ProposalInboxScreenState extends ConsumerState<ProposalInboxScreen> {
       await _showBatchReport(result);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(_message(e))),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(_message(e))));
       }
       await _load();
     } finally {
@@ -151,10 +151,12 @@ class _ProposalInboxScreenState extends ConsumerState<ProposalInboxScreen> {
   }
 
   Future<void> _showBatchReport(BatchApprovalResult result) async {
-    final savedButNotRemoved =
-        result.failures.where((failure) => failure.written).length;
-    final notApplied =
-        result.failures.where((failure) => !failure.written).length;
+    final savedButNotRemoved = result.failures
+        .where((failure) => failure.written)
+        .length;
+    final notApplied = result.failures
+        .where((failure) => !failure.written)
+        .length;
     final details = <String>[
       if (result.approved.isNotEmpty)
         'Approved and removed: ${result.approved.length}.',
@@ -176,10 +178,11 @@ class _ProposalInboxScreenState extends ConsumerState<ProposalInboxScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              for (final line in details) Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Text(line),
-              ),
+              for (final line in details)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Text(line),
+                ),
               for (final failure in result.failures)
                 Padding(
                   padding: const EdgeInsets.only(top: 4),
@@ -244,8 +247,10 @@ class _ProposalInboxScreenState extends ConsumerState<ProposalInboxScreen> {
               child: Text('No proposals are waiting.'),
             ),
           if (items != null &&
-              items.any((item) =>
-                  item.state == InboxItemState.ready && item.note != null))
+              items.any(
+                (item) =>
+                    item.state == InboxItemState.ready && item.note != null,
+              ))
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: Align(

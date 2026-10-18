@@ -154,9 +154,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   void _scheduleProposalCheck(SyncUiState sync, VaultState vault) {
     final settings = sync.settings;
-    if (!sync.loaded || !settings.enabled || !settings.configured ||
+    if (!sync.loaded ||
+        !settings.enabled ||
+        !settings.configured ||
         vault is! VaultReady) {
-      if (_eligibilityKey != null || _proposalCount != 0 ||
+      if (_eligibilityKey != null ||
+          _proposalCount != 0 ||
           _proposalError != null) {
         _eligibilityKey = null;
         _proposalCount = 0;
@@ -175,7 +178,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   Future<void> _checkProposals(String key) async {
     try {
-      final inbox = await ref.read(syncControllerProvider.notifier).proposalInbox();
+      final inbox = await ref
+          .read(syncControllerProvider.notifier)
+          .proposalInbox();
       final items = await inbox.load();
       if (!mounted || _eligibilityKey != key) return;
       setState(() {

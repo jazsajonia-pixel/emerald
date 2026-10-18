@@ -51,7 +51,9 @@ void main() {
     expect(find.textContaining('AI-suggested links: off'), findsOneWidget);
   });
 
-  testWidgets('tapping a node offers actions and opens the selected note', (tester) async {
+  testWidgets('tapping a node offers actions and opens the selected note', (
+    tester,
+  ) async {
     await pumpEmerald(tester, storage: _storage());
     await _graph(tester);
     await tester.tapAt(_nodePosition(tester, 'Gamma'));

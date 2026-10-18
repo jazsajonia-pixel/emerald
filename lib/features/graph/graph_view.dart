@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart' show SemanticsProperties;
 
 import 'graph_layout.dart';
 import 'graph_model.dart';
@@ -52,7 +53,8 @@ class _GraphViewState extends State<GraphView>
   }
 
   void _syncMotion() {
-    final shouldAnimate = !MediaQuery.of(context).disableAnimations &&
+    final shouldAnimate =
+        !MediaQuery.of(context).disableAnimations &&
         widget.data.nodes.length <= 600;
     if (shouldAnimate && _motion == null) {
       _motion = AnimationController(
@@ -108,7 +110,7 @@ class _GraphViewState extends State<GraphView>
     // position. The raw-position pass is a forgiving fallback for a 48 dp
     // target during a zoom/pan transition.
     final origin = Offset(widget.layout.width / 2, widget.layout.height / 2);
-    final radius = math.max(18, 24 / scale);
+    final radius = math.max(18, 24 / scale).toDouble();
     int? best;
     var bestDistance = double.infinity;
     for (var i = 0; i < widget.data.nodes.length; i++) {
@@ -396,7 +398,9 @@ class _GraphPainter extends CustomPainter {
         CustomPainterSemantics(
           rect: Rect.fromCircle(
             center: _point(i),
-            radius: math.max(24, GraphView.nodeRadius(data.nodes[i])),
+            radius: math
+                .max(24, GraphView.nodeRadius(data.nodes[i]))
+                .toDouble(),
           ),
           properties: SemanticsProperties(
             label: data.nodes[i].title,
