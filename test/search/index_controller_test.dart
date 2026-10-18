@@ -1,9 +1,9 @@
 import 'dart:convert';
 
-import 'package:emerald/data/memory_vault_storage.dart';
-import 'package:emerald/data/vault_storage.dart';
-import 'package:emerald/features/search/index_controller.dart';
-import 'package:emerald/features/vault/vault_controller.dart';
+import 'package:sapphire/data/memory_vault_storage.dart';
+import 'package:sapphire/data/vault_storage.dart';
+import 'package:sapphire/features/search/index_controller.dart';
+import 'package:sapphire/features/vault/vault_controller.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -87,7 +87,7 @@ void main() {
     );
   });
 
-  test('updateNote after an Emerald write avoids re-reading', () async {
+  test('updateNote after an Sapphire write avoids re-reading', () async {
     storage.reads = 0;
     final stamp = await storage.writeFile(
       vault,

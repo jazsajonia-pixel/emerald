@@ -22,6 +22,14 @@ enum SyncActionKind {
 
   /// Gone on both sides: forget the base entry.
   forget,
+
+  /// Removed on GitHub and unchanged locally: delete the local note (its
+  /// content is kept in note history first). Only with mirrored deletions.
+  deleteLocal,
+
+  /// Deleted on this phone and unchanged on GitHub: delete it on GitHub too.
+  /// Only with mirrored deletions.
+  deleteRemote,
 }
 
 class PlannedAction {
@@ -44,13 +52,17 @@ class PlannedAction {
 
 /// Three-way comparison of local, remote and last-synced Git blob SHAs.
 ///
-/// Policy (docs/SYNC.md): nothing is ever deleted on either side; when both
-/// sides changed, GitHub's version is saved as a conflict copy next to the
-/// local note.
+/// Policy (docs/SYNC.md): with [mirrorDeletions] a note deleted on one side
+/// (and unchanged on the other) is deleted on the other side too, so the
+/// phone folder and the repository stay identical. Without it nothing is
+/// ever deleted. An edit always wins over a deletion. When both sides
+/// changed, GitHub's version is saved as a conflict copy next to the local
+/// note.
 List<PlannedAction> planSync({
   required Map<String, String> local,
   required Map<String, String> remote,
   required Map<String, String> base,
+  bool mirrorDeletions = false,
 }) {
   final paths = {...local.keys, ...remote.keys, ...base.keys}.toList()..sort();
   final out = <PlannedAction>[];
@@ -76,13 +88,21 @@ List<PlannedAction> planSync({
       out.add(
         a(
           r == null
-              ? SyncActionKind.remoteDeletedKept
+              ? (mirrorDeletions
+                    ? SyncActionKind.deleteLocal
+                    : SyncActionKind.remoteDeletedKept)
               : SyncActionKind.download,
         ),
       );
     } else if (r == b) {
       out.add(
-        a(l == null ? SyncActionKind.localMissingKept : SyncActionKind.upload),
+        a(
+          l == null
+              ? (mirrorDeletions
+                    ? SyncActionKind.deleteRemote
+                    : SyncActionKind.localMissingKept)
+              : SyncActionKind.upload,
+        ),
       );
     } else if (l == null) {
       out.add(
@@ -108,6 +128,8 @@ class SyncConflict {
 class SyncReport {
   int uploaded = 0;
   int downloaded = 0;
+  int deletedLocal = 0;
+  int deletedRemote = 0;
   int unchanged = 0;
   final List<SyncConflict> conflicts = [];
   final List<String> notices = [];
@@ -116,7 +138,10 @@ class SyncReport {
   DateTime? finishedAt;
 
   bool get ok => fatal == null && failures.isEmpty;
-  bool get changedLocalFiles => downloaded > 0 || conflicts.isNotEmpty;
+  bool get changedLocalFiles =>
+      downloaded > 0 || deletedLocal > 0 || conflicts.isNotEmpty;
+  bool get changedAnything =>
+      uploaded > 0 || deletedRemote > 0 || changedLocalFiles;
 }
 
 typedef SyncProgress = void Function(int done, int total, String path);
@@ -132,6 +157,7 @@ class SyncEngine {
     required this.client,
     required this.branch,
     this.maxFileBytes = 8 * 1024 * 1024,
+    this.mirrorDeletions = false,
     DateTime Function()? clock,
   }) : _now = clock ?? DateTime.now;
 
@@ -141,7 +167,15 @@ class SyncEngine {
   final GitHubClient client;
   final String branch;
   final int maxFileBytes;
+  final bool mirrorDeletions;
   final DateTime Function() _now;
+
+  /// Deletions are mirrored only while they look deliberate. If one sync
+  /// would delete more than this share of the synced notes (and more than
+  /// [_deleteFloor]), nothing is deleted: that pattern usually means lost
+  /// folder access or a wrong repository, not a real clean-up.
+  static const _deleteShare = 0.5;
+  static const _deleteFloor = 5;
 
   static bool _syncablePath(String p) {
     if (!VaultPath.isMarkdown(p)) return false;
@@ -212,11 +246,51 @@ class SyncEngine {
       }
     }
 
-    final plan = planSync(
+    final baseShas = {for (final e in base.files.entries) e.key: e.value.sha};
+    var plan = planSync(
       local: local,
       remote: remote,
-      base: {for (final e in base.files.entries) e.key: e.value.sha},
+      base: baseShas,
+      mirrorDeletions: mirrorDeletions,
     );
+    if (mirrorDeletions) {
+      int count(SyncActionKind k) => plan.where((a) => a.kind == k).length;
+      bool tooMany(int n) =>
+          n > _deleteFloor && n > baseShas.length * _deleteShare;
+      final localDeletes = count(SyncActionKind.deleteLocal);
+      final remoteDeletes = count(SyncActionKind.deleteRemote);
+      final blockLocal = tooMany(localDeletes);
+      final blockRemote = tooMany(remoteDeletes) || local.isEmpty;
+      if (blockLocal) {
+        report.notices.add(
+          'GitHub removed $localDeletes notes at once; kept them on this '
+          'phone for safety.',
+        );
+      }
+      if (blockRemote && remoteDeletes > 0) {
+        report.notices.add(
+          '$remoteDeletes notes are missing on this phone; kept them on '
+          'GitHub for safety. Check the folder access in Settings.',
+        );
+      }
+      if (blockLocal || blockRemote) {
+        plan = planSync(local: local, remote: remote, base: baseShas).map((a) {
+          final keep =
+              (a.kind == SyncActionKind.remoteDeletedKept && !blockLocal) ||
+              (a.kind == SyncActionKind.localMissingKept && !blockRemote);
+          if (!keep) return a;
+          return PlannedAction(
+            a.path,
+            a.kind == SyncActionKind.remoteDeletedKept
+                ? SyncActionKind.deleteLocal
+                : SyncActionKind.deleteRemote,
+            local: a.local,
+            remote: a.remote,
+            base: a.base,
+          );
+        }).toList();
+      }
+    }
     final work = plan.where((a) => a.kind != SyncActionKind.inSync).length;
     var done = 0;
     for (final a in plan) {
@@ -265,6 +339,17 @@ class SyncEngine {
         );
       case SyncActionKind.localMissingKept:
         report.notices.add('${a.path}: missing on this phone; kept on GitHub');
+      case SyncActionKind.deleteLocal:
+        await _deleteLocal(a, base, report);
+      case SyncActionKind.deleteRemote:
+        await client.deleteFile(
+          path: a.path,
+          sha: a.remote!,
+          branch: branch,
+          message: 'Delete ${a.path} (Sapphire sync)',
+        );
+        base.files.remove(a.path);
+        report.deletedRemote++;
       case SyncActionKind.upload:
         await _upload(a, entry!, base, report);
       case SyncActionKind.download:
@@ -291,7 +376,7 @@ class SyncEngine {
       bytes: c.bytes,
       branch: branch,
       message:
-          '${a.remote == null ? 'Add' : 'Update'} ${a.path} (Emerald sync)',
+          '${a.remote == null ? 'Add' : 'Update'} ${a.path} (Sapphire sync)',
       previousSha: a.remote,
     );
     base.files[a.path] = SyncedFile(
@@ -359,6 +444,27 @@ class SyncEngine {
       lastModified: stamp.lastModified,
     );
     report.downloaded++;
+  }
+
+  Future<void> _deleteLocal(
+    PlannedAction a,
+    SyncBase base,
+    SyncReport report,
+  ) async {
+    final current = await storage.readFile(vault, a.path);
+    if (gitBlobSha(current.bytes) != a.local) {
+      _invalidate(base, a.path);
+      throw VaultException(VaultErrorCode.conflict);
+    }
+    // Keep the last content recoverable from note history.
+    await history.record(vault.id, a.path, current.bytes);
+    await storage.deleteFile(
+      vault,
+      a.path,
+      expectedSha256: current.stamp.sha256,
+    );
+    base.files.remove(a.path);
+    report.deletedLocal++;
   }
 
   Future<void> _conflict(

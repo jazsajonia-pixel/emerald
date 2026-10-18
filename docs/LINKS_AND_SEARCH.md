@@ -24,16 +24,16 @@ Not counted as note links: images, external URLs (`https:`, `mailto:`,
   case match, then the linking note's folder, then the shallowest path, then
   alphabetical order. Such links are flagged as ambiguous in the links sheet.
   Use `[[A/Plan]]` to be explicit.
-- Unmatched links are **broken**. Renaming or deleting a note outside Emerald
+- Unmatched links are **broken**. Renaming or deleting a note outside Sapphire
   turns its incoming links into broken links after the next rescan.
-- External links in the preview are never opened automatically; Emerald
+- External links in the preview are never opened automatically; Sapphire
   shows the URL and offers to copy it.
 
 ## The index
 
 - Built in memory from the Markdown files whenever a vault is opened, and
   updated incrementally: only files whose size or modification time changed
-  are re-read on **Rescan**. Notes saved in Emerald update immediately.
+  are re-read on **Rescan**. Notes saved in Sapphire update immediately.
 - **Rebuild index** (Brain → ⋮) discards the index and re-reads every note.
   Indexing only reads files; it never writes, moves or deletes notes.
 - Files that cannot be read (e.g. larger than 8 MB) are listed under

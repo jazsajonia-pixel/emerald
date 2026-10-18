@@ -39,7 +39,7 @@ class _AiHubScreenState extends ConsumerState<AiHubScreen> {
       builder: (ctx) => AlertDialog(
         title: const Text('Send notes to an AI provider?'),
         content: Text(
-          '${cfg.info?.dataNotice ?? ''}\n\nEmerald only sends your question, '
+          '${cfg.info?.dataNotice ?? ''}\n\nSapphire only sends your question, '
           'note titles from searches, and the notes the AI chooses to read. '
           'The AI cannot change notes without your approval.',
         ),
@@ -149,7 +149,7 @@ class _AiHubScreenState extends ConsumerState<AiHubScreen> {
               icon: Icons.auto_awesome_outlined,
               title: 'AI is optional and off',
               message:
-                  'Emerald works fully without AI. To ask questions about your '
+                  'Sapphire works fully without AI. To ask questions about your '
                   'notes, add your own API key for a supported provider. '
                   'Nothing is sent anywhere until you do.',
               action: FilledButton.icon(

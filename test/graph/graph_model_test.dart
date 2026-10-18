@@ -1,9 +1,9 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
 
-import 'package:emerald/features/graph/graph_layout.dart';
-import 'package:emerald/features/graph/graph_model.dart';
-import 'package:emerald/features/search/vault_index.dart';
+import 'package:sapphire/features/graph/graph_layout.dart';
+import 'package:sapphire/features/graph/graph_model.dart';
+import 'package:sapphire/features/search/vault_index.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 VaultIndex build(Map<String, String> files) => VaultIndex({
@@ -143,6 +143,50 @@ void main() {
       expect(l.hitTest(12, 11, 10), 0);
       expect(l.hitTest(95, 98, 10), 1);
       expect(l.hitTest(50, 50, 10), isNull);
+    });
+
+    test(
+      '2.5D projection is deterministic, invertible and finite near plane',
+      () {
+        const projection = GraphProjection();
+        const origin = Offset(200, 160);
+        const point = Offset(420, 80);
+        final a = projection.project(point, origin: origin, depth: 64);
+        final b = projection.project(point, origin: origin, depth: 64);
+        expect(a, b);
+        final roundTrip = projection.unproject(a, origin: origin, depth: 64);
+        expect(roundTrip.dx, closeTo(point.dx, 0.0001));
+        expect(roundTrip.dy, closeTo(point.dy, 0.0001));
+        for (final depth in [0.0, -10.0, double.nan, double.infinity]) {
+          final projected = projection.project(
+            point,
+            origin: origin,
+            depth: depth,
+          );
+          expect(projected.dx.isFinite && projected.dy.isFinite, isTrue);
+          expect(projection.scaleForDepth(depth).isFinite, isTrue);
+        }
+      },
+    );
+
+    test('rotating 3D projection moves nodes across the canvas', () {
+      const projection = GraphProjection();
+      const origin = Offset(300, 240);
+      const point = Offset(520, 110);
+      final first = projection.projectRotating(
+        point,
+        origin: origin,
+        depth: 106,
+        rotation: 0,
+      );
+      final rotated = projection.projectRotating(
+        point,
+        origin: origin,
+        depth: 106,
+        rotation: math.pi / 2,
+      );
+      expect((rotated - first).distance, greaterThan(20));
+      expect(rotated.dx.isFinite && rotated.dy.isFinite, isTrue);
     });
 
     test('1500-node vault lays out in reasonable time', () {

@@ -1,4 +1,4 @@
-name: emerald
+name: sapphire
 description: "Local-first Markdown knowledge app for Android"
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
@@ -35,6 +35,7 @@ dependencies:
   flutter_riverpod: ^3.4.3
   flutter_secure_storage: ^11.2.0
   http: ^1.6.0
+  url_launcher: ^6.3.3
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.

@@ -15,13 +15,13 @@ folder and reading/writing real files through SAF must be checked manually.
 Install the APK from the latest successful run, then:
 
 1. Open **Brain** → **Choose vault folder** → create/select e.g.
-   `Documents/EmeraldTest`. Notes in it appear (folders first).
+   `Documents/SapphireTest`. Notes in it appear (folders first).
 2. **New note** "Test" → type text → **Save** → "Saved" appears.
 3. Back out, reopen "Test": the text is there.
-4. Force-stop Emerald, reopen: the vault is still selected (persisted access).
+4. Force-stop Sapphire, reopen: the vault is still selected (persisted access).
 5. Open the same file in another editor (e.g. Obsidian on the same folder):
    the saved text is visible.
-6. Open "Test" in Emerald, edit without saving, change the file in the other
+6. Open "Test" in Sapphire, edit without saving, change the file in the other
    editor, return and tap **Save** → conflict dialog. Try *Save mine as a
    copy*; both files exist.
 7. ⋮ → **Previous versions** lists earlier saves.
@@ -68,30 +68,21 @@ token — see docs/SYNC.md):
     Previous versions shows the old text.
 25. Edit the same note on the phone and on github.com differently, Sync now →
     a "(GitHub conflict …)" note appears; your phone version is unchanged.
-26. Delete a note on github.com, Sync now → it is still on the phone.
+26. Turn off Mirror deletions, delete a note on github.com, Sync now → it is still on the phone.
 27. Airplane mode → Sync now → "No connection to GitHub", nothing changed.
-28. Revoke the token on GitHub → Sync now → "GitHub rejected the token".
+28. Revoke access on GitHub → Sync now → "GitHub rejected the sign-in".
 
-AI apps through the MCP server (optional; needs GitHub sync working and the
-server deployed on Vercel — see mcp-server/README.md):
+Sign in with GitHub and automatic sync:
 
-29. Open `https://<project>.vercel.app/api/mcp` in a browser →
-    `{"error":"Missing or wrong access secret."}`.
-30. Add the connector in one AI app (Claude, Perplexity, Manus or ChatGPT) →
-    ask "List my Emerald notes" → your synced notes are listed; nothing from
-    `.obsidian/` or other hidden folders.
-31. Ask it to propose a change to an existing note → it reports a proposal
-    saved and that nothing changed yet. On github.com the note is unchanged
-    and a file appears in `.emerald/proposals/`.
-32. In Emerald: Settings → GitHub sync → **AI app proposals** → the diff is
-    shown. **Reject** → the proposal file disappears on GitHub; the note is
-    unchanged.
-33. Repeat and **Approve & save** → the note changes on the phone (⋮ →
-    Previous versions shows the old text) → **Sync now** → the change is on
-    github.com.
-34. Edit the note on the phone after the AI proposed a change → the
-    inbox shows "differs from the version the AI read" and only offers Reject.
-35. Change `EMERALD_MCP_SECRET` in Vercel and redeploy → the AI app can no
-    longer connect.
+29. Settings → GitHub sync → One-time setup → create the GitHub App (tick
+    Enable Device Flow), paste the Client ID, install it on the notes repo only.
+30. Sign in with GitHub → code shown → approve on github.com → "Signed in as
+    @you" and only the notes repository is listed → tap it → first sync runs.
+31. Edit a note on github.com, return to Sapphire → the change appears within
+    the chosen interval (or immediately on returning to the app).
+32. Edit a note in Sapphire → about 6 s later the commit is on github.com.
+33. Delete a note on github.com → after the next sync it is gone on the phone
+    and its last content is in note history. Delete one on the phone → it is
+    deleted on GitHub.
 
 Please report the Android version and device model with any failure.

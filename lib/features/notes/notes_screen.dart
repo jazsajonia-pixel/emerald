@@ -166,7 +166,7 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
             title: 'No vault selected',
             message:
                 'Choose a folder that contains (or will contain) your '
-                'Markdown notes. Emerald edits the files in place, so they '
+                'Markdown notes. Sapphire edits the files in place, so they '
                 'stay usable in Obsidian and other editors.',
             action: FilledButton.icon(
               onPressed: controller.pick,

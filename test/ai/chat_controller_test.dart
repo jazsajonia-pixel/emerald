@@ -1,13 +1,13 @@
 import 'dart:convert';
 
-import 'package:emerald/data/memory_vault_storage.dart';
-import 'package:emerald/data/vault_storage.dart';
-import 'package:emerald/features/ai/ai_config.dart';
-import 'package:emerald/features/ai/ai_types.dart';
-import 'package:emerald/features/ai/chat_controller.dart';
-import 'package:emerald/features/ai/proposals.dart';
-import 'package:emerald/features/search/index_controller.dart';
-import 'package:emerald/features/vault/vault_controller.dart';
+import 'package:sapphire/data/memory_vault_storage.dart';
+import 'package:sapphire/data/vault_storage.dart';
+import 'package:sapphire/features/ai/ai_config.dart';
+import 'package:sapphire/features/ai/ai_types.dart';
+import 'package:sapphire/features/ai/chat_controller.dart';
+import 'package:sapphire/features/ai/proposals.dart';
+import 'package:sapphire/features/search/index_controller.dart';
+import 'package:sapphire/features/vault/vault_controller.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 

@@ -46,7 +46,7 @@ class IndexController extends Notifier<IndexState> {
     await _sync(ref.read(vaultControllerProvider), force: true);
   }
 
-  /// Called after Emerald itself wrote a note, so it does not need re-reading.
+  /// Called after Sapphire itself wrote a note, so it does not need re-reading.
   void updateNote(String path, String text, FileStamp stamp) {
     if (_vaultId == null) return;
     _cache[path] = IndexedNote(

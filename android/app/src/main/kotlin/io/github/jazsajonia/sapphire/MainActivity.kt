@@ -1,4 +1,4 @@
-package io.github.jazsajonia.emerald
+package io.github.jazsajonia.sapphire
 
 import android.content.Intent
 import io.flutter.embedding.android.FlutterActivity

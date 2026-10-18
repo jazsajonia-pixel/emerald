@@ -297,7 +297,7 @@ class VaultTools {
     final p = _notePath(_string(a, 'path'));
     final newText = _string(a, 'new_content');
     final doc = await repository.open(vault, p);
-    if (doc.readOnly) throw _ToolError('This note is read-only in Emerald.');
+    if (doc.readOnly) throw _ToolError('This note is read-only in Sapphire.');
     sharedNotes.add(p);
     if (doc.text == newText) {
       return {'status': 'no_change', 'path': p};

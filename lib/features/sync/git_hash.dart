@@ -3,7 +3,7 @@ import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
 
-/// Git blob object id: SHA-1 of `"blob <size>\0" + bytes`. Lets Emerald
+/// Git blob object id: SHA-1 of `"blob <size>\0" + bytes`. Lets Sapphire
 /// compare a local file with the SHA GitHub reports in a tree without
 /// downloading the file.
 String gitBlobSha(Uint8List bytes) {

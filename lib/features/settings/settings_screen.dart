@@ -16,7 +16,7 @@ class SettingsScreen extends ConsumerWidget {
       builder: (ctx) => AlertDialog(
         title: const Text('Forget this vault?'),
         content: const Text(
-          'Emerald will stop using this folder and release its access. '
+          'Sapphire will stop using this folder and release its access. '
           'Your notes are not changed or deleted.',
         ),
         actions: [
@@ -91,14 +91,14 @@ class SettingsScreen extends ConsumerWidget {
             leading: Icon(Icons.shield_outlined),
             title: Text('Privacy'),
             subtitle: Text(
-              'Emerald stores no notes of its own. Your Markdown files stay '
+              'Sapphire stores no notes of its own. Your Markdown files stay '
               'in the folder you choose. Previous versions of edited notes '
               'are kept privately on this device for recovery.',
             ),
           ),
           const AboutListTile(
             icon: Icon(Icons.info_outline),
-            applicationName: 'Emerald',
+            applicationName: 'Sapphire',
             applicationLegalese: 'Local-first Markdown knowledge app.',
           ),
         ],

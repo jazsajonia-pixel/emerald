@@ -111,7 +111,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen>
           _doc = current;
           _text.text = current.text;
         });
-        _snack('Reloaded: the note was changed outside Emerald.');
+        _snack('Reloaded: the note was changed outside Sapphire.');
       }
     } on Exception {
       // Reported when the user saves; nothing to do here.
@@ -169,7 +169,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen>
     final choice = await showDialog<_ConflictChoice>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Note changed outside Emerald'),
+        title: const Text('Note changed outside Sapphire'),
         content: const Text(
           'Another app changed this note after you opened it. Nothing has '
           'been saved yet. How do you want to continue?',
@@ -216,7 +216,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen>
           if (!await _confirm(
             'Overwrite the other version?',
             'The newer version from the other app will be replaced. A copy '
-                'of it is kept in this note\'s history in Emerald.',
+                'of it is kept in this note\'s history in Sapphire.',
             'Overwrite',
           )) {
             return false;
@@ -233,7 +233,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen>
   Future<bool> _offerRecreate(VaultHandle vault) async {
     final ok = await _confirm(
       'Note no longer exists',
-      'This note was moved or deleted outside Emerald. Save your text as a '
+      'This note was moved or deleted outside Sapphire. Save your text as a '
           'new note at the same place?',
       'Save as new note',
     );
@@ -325,7 +325,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen>
       );
       return;
     }
-    // External link: Emerald does not open the network on its own.
+    // External link: Sapphire does not open the network on its own.
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -362,7 +362,8 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen>
               child: EmptyView(
                 icon: Icons.history,
                 title: 'No previous versions',
-                message: 'Emerald keeps a copy each time it overwrites a note.',
+                message:
+                    'Sapphire keeps a copy each time it overwrites a note.',
               ),
             )
           : ListView(
@@ -487,7 +488,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen>
       if (_externallyChanged)
         MaterialBanner(
           content: const Text(
-            'This note was changed outside Emerald while you were editing.',
+            'This note was changed outside Sapphire while you were editing.',
           ),
           leading: const Icon(Icons.warning_amber),
           actions: [TextButton(onPressed: _save, child: const Text('Resolve'))],

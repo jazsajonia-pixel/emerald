@@ -1,5 +1,5 @@
-import 'package:emerald/data/memory_vault_storage.dart';
-import 'package:emerald/data/vault_storage.dart';
+import 'package:sapphire/data/memory_vault_storage.dart';
+import 'package:sapphire/data/vault_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -10,8 +10,8 @@ const _vault = VaultHandle(id: 'memory://vault', name: 'Vault');
 MemoryVaultStorage _storage() => MemoryVaultStorage(
   files: {
     'Start.md':
-        '# Start\n\nBegin at [[Projects/Emerald|the app]]. Also [[Ghost]].',
-    'Projects/Emerald.md': 'Emerald is a graph app.',
+        '# Start\n\nBegin at [[Projects/Sapphire|the app]]. Also [[Ghost]].',
+    'Projects/Sapphire.md': 'Sapphire is a graph app.',
     'Recipes.md': 'Pancakes with maple syrup.',
   },
   vaultToPick: _vault,
@@ -30,7 +30,7 @@ Future<void> _brain(WidgetTester tester) async {
 
 void main() {
   testWidgets('search finds notes by content and opens them', (tester) async {
-    await pumpEmerald(tester, storage: _storage());
+    await pumpSapphire(tester, storage: _storage());
     await _brain(tester);
     await tester.tap(find.byTooltip('Search'));
     await tester.pumpAndSettle();
@@ -44,7 +44,7 @@ void main() {
   });
 
   testWidgets('search with no results shows an empty state', (tester) async {
-    await pumpEmerald(tester, storage: _storage());
+    await pumpSapphire(tester, storage: _storage());
     await _brain(tester);
     await tester.tap(find.byTooltip('Search'));
     await tester.pumpAndSettle();
@@ -56,11 +56,11 @@ void main() {
   testWidgets('backlinks sheet lists linking notes and broken links', (
     tester,
   ) async {
-    await pumpEmerald(tester, storage: _storage());
+    await pumpSapphire(tester, storage: _storage());
     await _brain(tester);
     await tester.tap(find.text('Projects'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Emerald'));
+    await tester.tap(find.text('Sapphire'));
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Note actions').last);
     await tester.pumpAndSettle();
@@ -81,7 +81,7 @@ void main() {
   testWidgets('tapping a wiki link in preview opens the target note', (
     tester,
   ) async {
-    await pumpEmerald(tester, storage: _storage());
+    await pumpSapphire(tester, storage: _storage());
     await _brain(tester);
     await tester.tap(find.text('Start'));
     await tester.pumpAndSettle();
@@ -91,11 +91,11 @@ void main() {
     expect(link, findsWidgets);
     await tester.tapOnText(find.textRange.ofSubstring('the app'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('Emerald is a graph app.'), findsOneWidget);
+    expect(find.textContaining('Sapphire is a graph app.'), findsOneWidget);
   });
 
   testWidgets('unlinked notes screen lists orphans', (tester) async {
-    await pumpEmerald(tester, storage: _storage());
+    await pumpSapphire(tester, storage: _storage());
     await _brain(tester);
     await tester.tap(find.byType(PopupMenuButton<String>));
     await tester.pumpAndSettle();
@@ -109,7 +109,7 @@ void main() {
   testWidgets('saving a new link updates backlinks without a rescan', (
     tester,
   ) async {
-    await pumpEmerald(tester, storage: _storage());
+    await pumpSapphire(tester, storage: _storage());
     await _brain(tester);
     await tester.tap(find.text('Recipes'));
     await tester.pumpAndSettle();

@@ -39,10 +39,11 @@ class SyncException implements Exception {
   String get userMessage => switch (code) {
     SyncErrorCode.notConfigured => 'GitHub sync is not set up.',
     SyncErrorCode.unauthorized =>
-      'GitHub rejected the token. Check it in Settings → GitHub sync.',
+      'GitHub rejected the sign-in. Connect GitHub again in Settings → '
+          'GitHub sync.',
     SyncErrorCode.forbidden =>
-      'The token is not allowed to do this. It needs Contents: Read and write '
-          'for this repository.',
+      'Sapphire is not allowed to do this. It needs Contents: Read and write '
+          'for this repository (install the Sapphire GitHub App on it).',
     SyncErrorCode.notFound =>
       'Repository or branch not found (or the token cannot see it).',
     SyncErrorCode.rateLimited => 'GitHub rate limit reached. Try again later.',
@@ -237,8 +238,8 @@ class GitHubClient {
     return sha;
   }
 
-  /// Deletes one file with one commit. Used only for AI proposal files in
-  /// `.emerald/proposals/` (never for notes). GitHub refuses (409/422) if the
+  /// Deletes one file with one commit (mirrors a deletion made on the
+  /// phone). GitHub refuses (409/422) if the
   /// file changed since [sha], reported as [SyncErrorCode.remoteChanged].
   Future<void> deleteFile({
     required String path,

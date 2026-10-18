@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -9,6 +10,7 @@ import '../notes/note_navigation.dart';
 import '../search/index_controller.dart';
 import '../search/vault_index.dart';
 import '../vault/vault_controller.dart';
+import '../../app/theme.dart';
 import 'graph_layout.dart';
 import 'graph_model.dart';
 import 'graph_view.dart';
@@ -29,7 +31,12 @@ class _GraphScreenState extends ConsumerState<GraphScreen> {
   int _depth = 1;
   bool _showIsolated = true;
   bool _searching = false;
+  bool _rotating = true;
+  bool _threeDimensional = true;
+  double _cameraYaw = 0;
+  double _cameraTilt = 0.18;
   final _query = TextEditingController();
+  final _cameraController = GraphCameraController();
 
   VaultIndex? _builtFrom;
   String? _builtCenter;
@@ -39,11 +46,146 @@ class _GraphScreenState extends ConsumerState<GraphScreen> {
   GraphLayout? _layout;
   int _layoutGeneration = 0;
   final Map<String, Offset> _positions = {};
+  Set<String> _pinnedPaths = {};
 
   @override
   void dispose() {
     _query.dispose();
     super.dispose();
+  }
+
+  Future<void> _showCameraControls() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (context, setSheetState) {
+          void updateCamera({double? yaw, double? tilt}) {
+            setSheetState(() {
+              if (yaw != null) _cameraYaw = yaw;
+              if (tilt != null) _cameraTilt = tilt;
+            });
+            setState(() {
+              if (yaw != null) _cameraYaw = yaw;
+              if (tilt != null) _cameraTilt = tilt;
+            });
+          }
+
+          return SafeArea(
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 4, 24, 24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Camera controls',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 16),
+                    const Text('Pan and zoom'),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        IconButton(
+                          tooltip: 'Zoom out',
+                          onPressed: _cameraController.zoomOut,
+                          icon: const Icon(Icons.remove_circle_outline),
+                        ),
+                        IconButton(
+                          tooltip: 'Zoom in',
+                          onPressed: _cameraController.zoomIn,
+                          icon: const Icon(Icons.add_circle_outline),
+                        ),
+                        IconButton(
+                          tooltip: 'Reset zoom',
+                          onPressed: _cameraController.resetZoom,
+                          icon: const Icon(Icons.center_focus_weak),
+                        ),
+                      ],
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const SizedBox(width: 48),
+                        IconButton(
+                          tooltip: 'Pan up',
+                          onPressed: () =>
+                              _cameraController.pan(const Offset(0, -64)),
+                          icon: const Icon(Icons.keyboard_arrow_up),
+                        ),
+                        const SizedBox(width: 48),
+                      ],
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        IconButton(
+                          tooltip: 'Pan left',
+                          onPressed: () =>
+                              _cameraController.pan(const Offset(-64, 0)),
+                          icon: const Icon(Icons.keyboard_arrow_left),
+                        ),
+                        const Icon(Icons.open_with, size: 20),
+                        IconButton(
+                          tooltip: 'Pan right',
+                          onPressed: () =>
+                              _cameraController.pan(const Offset(64, 0)),
+                          icon: const Icon(Icons.keyboard_arrow_right),
+                        ),
+                      ],
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const SizedBox(width: 48),
+                        IconButton(
+                          tooltip: 'Pan down',
+                          onPressed: () =>
+                              _cameraController.pan(const Offset(0, 64)),
+                          icon: const Icon(Icons.keyboard_arrow_down),
+                        ),
+                        const SizedBox(width: 48),
+                      ],
+                    ),
+                    const Divider(),
+                    Text('Orbit · ${(_cameraYaw * 180 / math.pi).round()}°'),
+                    Slider(
+                      key: const Key('camera-yaw-slider'),
+                      value: _cameraYaw,
+                      min: -math.pi,
+                      max: math.pi,
+                      divisions: 72,
+                      label: '${(_cameraYaw * 180 / math.pi).round()}°',
+                      onChanged: (value) => updateCamera(yaw: value),
+                    ),
+                    Text('Tilt · ${(_cameraTilt * 180 / math.pi).round()}°'),
+                    Slider(
+                      key: const Key('camera-tilt-slider'),
+                      value: _cameraTilt,
+                      min: -0.55,
+                      max: 0.55,
+                      divisions: 22,
+                      label: '${(_cameraTilt * 180 / math.pi).round()}°',
+                      onChanged: (value) => updateCamera(tilt: value),
+                    ),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton.icon(
+                        onPressed: () => updateCamera(yaw: 0, tilt: 0.18),
+                        icon: const Icon(Icons.restart_alt),
+                        label: const Text('Reset orbit and tilt'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
   }
 
   void _ensureGraph(VaultIndex index) {
@@ -93,6 +235,72 @@ class _GraphScreenState extends ConsumerState<GraphScreen> {
     _layout = null;
   });
 
+  Future<void> _showNodeActions(String path, GraphData data) async {
+    GraphNode? node;
+    for (final candidate in data.nodes) {
+      if (candidate.path == path) {
+        node = candidate;
+        break;
+      }
+    }
+    final selected = node;
+    if (selected == null) return;
+    final isPinned = _pinnedPaths.contains(path);
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.hub_outlined),
+                title: Text(selected.title),
+                subtitle: Text(
+                  '${selected.path}\n${selected.degree} linked notes',
+                ),
+                isThreeLine: true,
+              ),
+              ListTile(
+                key: const Key('graph-node-open'),
+                leading: const Icon(Icons.description_outlined),
+                title: const Text('Open note'),
+                onTap: () => Navigator.pop(sheetContext, 'open'),
+              ),
+              ListTile(
+                key: const Key('graph-node-focus'),
+                leading: const Icon(Icons.center_focus_strong),
+                title: const Text('Focus local graph'),
+                onTap: () => Navigator.pop(sheetContext, 'focus'),
+              ),
+              ListTile(
+                key: const Key('graph-node-pin'),
+                leading: Icon(
+                  isPinned ? Icons.push_pin : Icons.push_pin_outlined,
+                ),
+                title: Text(isPinned ? 'Unpin node' : 'Pin node'),
+                onTap: () => Navigator.pop(sheetContext, 'pin'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (!mounted) return;
+    if (action == 'open') {
+      await openNote(context, path);
+    } else if (action == 'focus') {
+      _openLocal(path);
+    } else if (action == 'pin') {
+      setState(() {
+        _pinnedPaths = {..._pinnedPaths};
+        if (!_pinnedPaths.add(path)) _pinnedPaths.remove(path);
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final vault = ref.watch(vaultControllerProvider);
@@ -119,6 +327,30 @@ class _GraphScreenState extends ConsumerState<GraphScreen> {
                 )
               : Text(title, overflow: TextOverflow.ellipsis),
           actions: [
+            IconButton(
+              tooltip: _threeDimensional
+                  ? 'Switch to 2D graph'
+                  : 'Switch to 3D graph',
+              icon: Icon(_threeDimensional ? Icons.view_in_ar : Icons.grid_on),
+              onPressed: () =>
+                  setState(() => _threeDimensional = !_threeDimensional),
+            ),
+            IconButton(
+              tooltip: 'Camera controls',
+              icon: const Icon(Icons.tune),
+              onPressed: _threeDimensional ? _showCameraControls : null,
+            ),
+            IconButton(
+              tooltip: _rotating
+                  ? 'Pause graph rotation'
+                  : 'Resume graph rotation',
+              icon: Icon(
+                _rotating
+                    ? Icons.motion_photos_auto
+                    : Icons.play_circle_outline,
+              ),
+              onPressed: () => setState(() => _rotating = !_rotating),
+            ),
             IconButton(
               tooltip: _searching ? 'Stop highlighting' : 'Highlight notes',
               icon: Icon(_searching ? Icons.close : Icons.search),
@@ -232,7 +464,13 @@ class _GraphScreenState extends ConsumerState<GraphScreen> {
                   data: data,
                   layout: layout,
                   query: _query.text,
-                  onNodeTap: (p) => openNote(context, p),
+                  pinnedPaths: _pinnedPaths,
+                  rotating: _rotating,
+                  threeDimensional: _threeDimensional,
+                  cameraYaw: _cameraYaw,
+                  cameraTilt: _cameraTilt,
+                  cameraController: _cameraController,
+                  onNodeTap: (p) => _showNodeActions(p, data),
                   onNodeLongPress: _openLocal,
                 ),
         ),
@@ -241,6 +479,9 @@ class _GraphScreenState extends ConsumerState<GraphScreen> {
           edges: data.edges.length,
           matches: matches,
           local: _center != null,
+          pinned: _pinnedPaths.length,
+          threeDimensional: _threeDimensional,
+          rotating: _rotating,
         ),
       ],
     );
@@ -253,12 +494,18 @@ class _Legend extends StatelessWidget {
     required this.edges,
     required this.matches,
     required this.local,
+    required this.pinned,
+    required this.threeDimensional,
+    required this.rotating,
   });
 
   final int nodes;
   final int edges;
   final int? matches;
   final bool local;
+  final int pinned;
+  final bool threeDimensional;
+  final bool rotating;
 
   @override
   Widget build(BuildContext context) {
@@ -286,26 +533,25 @@ class _Legend extends StatelessWidget {
               '${matches == null ? '' : ' · $matches highlighted'}',
               style: small,
             ),
+            Text(
+              threeDimensional
+                  ? '3D perspective${rotating ? ' · auto-rotating' : ' · paused'}'
+                  : '2D flat view',
+              style: small?.copyWith(color: scheme.onSurfaceVariant),
+            ),
             const SizedBox(height: 4),
             Wrap(
               spacing: 12,
               runSpacing: 4,
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
+                Text('Node colors show groups', style: small),
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    dot(scheme.primary),
+                    dot(SapphireTheme.unresolvedNode),
                     const SizedBox(width: 4),
-                    Text('Linked', style: small),
-                  ],
-                ),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    dot(scheme.surfaceContainerHighest, ring: scheme.outline),
-                    const SizedBox(width: 4),
-                    Text('Unlinked', style: small),
+                    Text('Unlinked note', style: small),
                   ],
                 ),
                 if (local)
@@ -318,13 +564,18 @@ class _Legend extends StatelessWidget {
                     ],
                   ),
                 Text(
-                  'Lines = your explicit links. AI-suggested links: off.',
+                  'Solid lines = explicit · violet dashes = inferred',
                   style: small,
                 ),
               ],
             ),
             Text(
-              'Tap a note to open it · long-press for its local graph',
+              (threeDimensional
+                      ? 'Tap a note for actions · hold & drag to pull it · '
+                            'drag space to orbit · pinch to zoom'
+                      : 'Tap a note for actions · hold & drag to pull it · '
+                            'drag to pan · pinch to zoom') +
+                  (pinned == 0 ? '' : ' · $pinned pinned'),
               style: small?.copyWith(color: scheme.onSurfaceVariant),
             ),
           ],

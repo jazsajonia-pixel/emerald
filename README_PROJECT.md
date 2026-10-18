@@ -1,12 +1,12 @@
-# Emerald — Project Overview
+# Sapphire — Project Overview
 
-> **Emerald** is a mobile-first, local-first AI knowledge app for Android. It works with ordinary Markdown files, presents their connections in an interactive knowledge graph, and provides a provider-independent way for compatible AI services to search and work with the user's knowledge.
+> **Sapphire** is a mobile-first, local-first AI knowledge app for Android. It works with ordinary Markdown files, presents their connections in an interactive knowledge graph, and provides a provider-independent way for compatible AI services to search and work with the user's knowledge.
 
 ## Product vision
 
-Emerald should help its owner maintain one portable knowledge base that can be used by different AI models and agents without repeatedly uploading notes. The user develops the project entirely on an Android phone and uses Perplexity with GitHub repository access to help implement it.
+Sapphire should help its owner maintain one portable knowledge base that can be used by different AI models and agents without repeatedly uploading notes. The user develops the project entirely on an Android phone and uses Perplexity with GitHub repository access to help implement it.
 
-**GitHub repository:** `emerald`
+**GitHub repository:** `sapphire`
 
 **Primary platform:** Android  
 **Initial implementation:** Flutter + Dart  
@@ -27,7 +27,7 @@ Emerald should help its owner maintain one portable knowledge base that can be u
 ## MVP scope
 
 ### Required for the first usable release
-- Flutter Android app with a consistent Emerald visual identity (dark theme with restrained emerald-green accents; accessible contrast).
+- Flutter Android app with a consistent Sapphire visual identity (dark theme with restrained sapphire-green accents; accessible contrast).
 - Select a Markdown vault directory using Android's supported document/folder picker and persist access where Android permits.
 - Browse folders and `.md` files.
 - Read, create, and edit Markdown notes.

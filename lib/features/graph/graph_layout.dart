@@ -1,6 +1,7 @@
 import 'dart:isolate';
 import 'dart:math' as math;
 import 'dart:typed_data';
+import 'dart:ui' show Offset;
 
 /// Result of a layout: node centres (x0, y0, x1, y1, …) inside a canvas of
 /// [width] × [height].
@@ -27,6 +28,84 @@ class GraphLayout {
       }
     }
     return best;
+  }
+}
+
+/// Perspective projection helpers for Sapphire's animated 3D graph view.
+///
+/// The force layout stays deterministic and inexpensive in 2D. The graph view
+/// lifts its nodes into a shallow 3D volume and rotates that volume before
+/// projecting it onto the canvas, including perspective foreshortening.
+class GraphProjection {
+  const GraphProjection({this.focalLength = 2200, this.nearPlane = 0.25});
+
+  /// Distance at which the perspective scale would become unstable.
+  final double nearPlane;
+
+  /// Larger values keep the graph readable while still giving depth cues.
+  final double focalLength;
+
+  /// Stable pseudo-depth in logical pixels for a node.
+  ///
+  /// It depends only on the node index and degree, so layout refreshes and
+  /// rebuilds do not make the graph appear to jump between depth layers.
+  double depthFor(int index, int degree) {
+    final seed = (index * 37 + degree * 17) & 0x7fffffff;
+    return 18 + (seed % 120).toDouble();
+  }
+
+  double scaleForDepth(double depth) {
+    final safeNear = nearPlane.isFinite && nearPlane > 0 ? nearPlane : 0.25;
+    final safeDepth = depth.isFinite ? math.max(safeNear, depth) : safeNear;
+    final safeFocal = focalLength.isFinite && focalLength > safeNear
+        ? focalLength
+        : 1;
+    final scale = safeFocal / (safeFocal + safeDepth);
+    return scale.isFinite && scale > 0 ? scale : 1;
+  }
+
+  /// Projects a layout point around [origin] onto the graph's 2D canvas.
+  Offset project(Offset point, {required Offset origin, double depth = 0}) {
+    final s = scaleForDepth(depth);
+    final projected = origin + (point - origin) * s;
+    return _finite(projected, fallback: origin);
+  }
+
+  /// Rotates a node around the vertical axis, tilts the resulting 3D point,
+  /// then projects it using perspective. [rotation] is in radians.
+  Offset projectRotating(
+    Offset point, {
+    required Offset origin,
+    required double depth,
+    required double rotation,
+    double tilt = 0.18,
+  }) {
+    final dx = point.dx - origin.dx;
+    final dy = point.dy - origin.dy;
+    final z = depth - 78;
+    final yawX = dx * math.cos(rotation) + z * math.sin(rotation);
+    final yawZ = -dx * math.sin(rotation) + z * math.cos(rotation);
+    final screenY = dy * math.cos(tilt) - yawZ * math.sin(tilt);
+    final cameraZ = dy * math.sin(tilt) + yawZ * math.cos(tilt);
+    final perspective = (focalLength / (focalLength + cameraZ)).clamp(
+      0.45,
+      1.65,
+    );
+    final projected =
+        origin + Offset(yawX * perspective, screenY * perspective);
+    return _finite(projected, fallback: origin);
+  }
+
+  /// Reverses [project] for hit testing at a known node depth.
+  Offset unproject(Offset point, {required Offset origin, double depth = 0}) {
+    final s = scaleForDepth(depth);
+    final unprojected = origin + (point - origin) / s;
+    return _finite(unprojected, fallback: origin);
+  }
+
+  static Offset _finite(Offset value, {required Offset fallback}) {
+    if (value.dx.isFinite && value.dy.isFinite) return value;
+    return fallback;
   }
 }
 

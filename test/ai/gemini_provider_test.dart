@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:emerald/features/ai/ai_types.dart';
-import 'package:emerald/features/ai/providers/gemini_provider.dart';
-import 'package:emerald/features/ai/tools/vault_tools.dart';
+import 'package:sapphire/features/ai/ai_types.dart';
+import 'package:sapphire/features/ai/providers/gemini_provider.dart';
+import 'package:sapphire/features/ai/tools/vault_tools.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';

@@ -57,10 +57,21 @@ final noteHistoryProvider = Provider<NoteHistory>((ref) {
   return FileNoteHistory(() async => Directory(await storage.appFilesDir()));
 });
 
+/// Counts note writes made in the app; sync listens to it to upload edits
+/// shortly after they are saved.
+final localEditsProvider = NotifierProvider<LocalEdits, int>(LocalEdits.new);
+
+class LocalEdits extends Notifier<int> {
+  @override
+  int build() => 0;
+  void bump() => state++;
+}
+
 final noteRepositoryProvider = Provider<NoteRepository>(
   (ref) => NoteRepository(
     ref.watch(vaultStorageProvider),
     ref.watch(noteHistoryProvider),
+    onWrite: () => ref.read(localEditsProvider.notifier).bump(),
   ),
 );
 
@@ -72,10 +83,10 @@ String describeVaultError(Object e) {
   if (e is VaultException) {
     return switch (e.code) {
       VaultErrorCode.permissionDenied =>
-        'Emerald no longer has permission to use this folder.',
+        'Sapphire no longer has permission to use this folder.',
       VaultErrorCode.notFound => 'The file or folder no longer exists.',
       VaultErrorCode.alreadyExists => 'A note with that name already exists.',
-      VaultErrorCode.conflict => 'The note was changed outside Emerald.',
+      VaultErrorCode.conflict => 'The note was changed outside Sapphire.',
       VaultErrorCode.tooLarge => 'The file is too large to open (limit 8 MB).',
       VaultErrorCode.invalidPath => 'That name or path is not allowed.',
       VaultErrorCode.readOnly => 'This note is read-only.',
@@ -153,7 +164,7 @@ class VaultController extends Notifier<VaultState> {
     }
   }
 
-  /// Forgets the vault in Emerald only. Files are never touched.
+  /// Forgets the vault in Sapphire only. Files are never touched.
   Future<void> forget() async {
     final s = state;
     if (s is VaultReady) await _storage.forgetVault(s.vault);
@@ -161,7 +172,7 @@ class VaultController extends Notifier<VaultState> {
     state = const VaultNone();
   }
 
-  /// Updates the listing after Emerald wrote [path], without a full rescan.
+  /// Updates the listing after Sapphire wrote [path], without a full rescan.
   void noteWritten(String path, FileStamp stamp) {
     final s = state;
     if (s is! VaultReady) return;

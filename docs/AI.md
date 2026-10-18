@@ -1,6 +1,6 @@
-# AI in Emerald (Phases 5–6)
+# AI in Sapphire (Phases 5–6)
 
-AI is optional. Emerald works fully without it, sends nothing anywhere until
+AI is optional. Sapphire works fully without it, sends nothing anywhere until
 you add your own API key, and asks for consent before the first request.
 
 ## How it works
@@ -61,7 +61,7 @@ At most 10 proposals per conversation.
 - The AI Hub shows which notes were sent ("Sent to Google Gemini: N notes").
   Only your question, search results (paths/titles/snippets), and notes the
   model chose to read are sent.
-- Requests go directly from the phone to the provider; there is no Emerald
+- Requests go directly from the phone to the provider; there is no Sapphire
   server.
 - The key is stored with `flutter_secure_storage` (Android Keystore-backed),
   never written to the vault, never displayed after saving, never logged, and
@@ -82,7 +82,7 @@ At most 10 proposals per conversation.
 ## Gemini setup (user)
 
 1. Create a key in Google AI Studio (aistudio.google.com → Get API key).
-2. Emerald → Settings → AI provider → paste key → "Test connection" (lists
+2. Sapphire → Settings → AI provider → paste key → "Test connection" (lists
    models; does not use generation quota) → pick a model → Save.
 3. Default model: `gemini-3.8-flash` (from the official models page at the
    time of writing). Any model ID returned by "Test connection" can be used.
@@ -101,7 +101,7 @@ At most 10 proposals per conversation.
   `http://localhost:11434/v1`, leave key empty, model = a pulled model that
   supports tools. Note search needs a tool-capable model.
 - **Other servers**: any HTTPS endpoint implementing `/chat/completions` and
-  `/models`. Emerald does not claim support for a specific vendor beyond the
+  `/models`. Sapphire does not claim support for a specific vendor beyond the
   documented API shape; verify with "Test connection" and the manual steps.
 - "Reasoning effort" is only sent when filled in, because not every server
   accepts the field.
@@ -135,40 +135,22 @@ At most 10 proposals per conversation.
 | Key required | Yes | Yes, except `localhost` servers |
 | Free option | Free tier (rate-limited; data may be used by Google) | Local Ollama (free, on-device) |
 
-If a model cannot use tools, the provider returns an error that Emerald shows
+If a model cannot use tools, the provider returns an error that Sapphire shows
 as-is; tool use is never simulated.
 
-## MCP and external agents
+## External AI apps (ChatGPT, Claude, Perplexity, …)
 
-**Phone app:** Emerald itself does not run an MCP server or client. A remote
-agent cannot reach an app on a phone or read Android Storage Access Framework
-folders, and stdio transport (client launches the server as a subprocess)
-does not apply to an Android app
-(https://modelcontextprotocol.io/specification/latest/basic/transports).
-
-**Remote MCP server (owner-requested, Phase 9):** ChatGPT, Claude,
-Perplexity and Manus connect to custom connectors from their own clouds over
-public HTTPS. The optional server in `mcp-server/` (deployed by the owner on
-Vercel) provides that endpoint and works on the GitHub sync repository:
-
-- Read tools: list, read, search, backlinks — Markdown notes only, hidden
-  folders excluded.
-- One write tool, `propose_note_change`, which stores a proposal in
-  `.emerald/proposals/` and never edits a note. The owner reviews the diff and
-  approves or rejects it in Emerald (same rule as in-app AI). No delete or
-  rename tools.
-- Access by a shared secret (header or `?key=`) stored in Vercel environment
-  variables, plus a fine-grained GitHub token limited to the sync repo.
-
-Setup, security notes and per-app connection steps: `mcp-server/README.md`.
-
-**Emerald as MCP client** (giving the in-app AI extra tools from remote MCP
-servers) is not implemented: it would widen what data leaves the phone and is
-not needed for the vault tools, which Emerald implements natively.
+Sapphire does not run an MCP server or client. External AIs work with your
+notes through the **GitHub notes repository**: GitHub sync keeps the phone
+folder and the repository identical (docs/SYNC.md), so an AI with access to
+the repository reads the same notes and its commits arrive on the phone at the
+next sync. The notes repository contains `AGENTS.md`, which tells any AI to
+read the index first, search instead of reading everything, and how to save
+new information.
 
 ## Manual verification per provider
 
-The agent that built Emerald did not call any real provider (no keys; no paid
+The agent that built Sapphire did not call any real provider (no keys; no paid
 usage). Automated tests use a mock HTTP client with request/response shapes
 from the official docs. Before relying on a provider, follow
 docs/TESTING.md steps 14–21.

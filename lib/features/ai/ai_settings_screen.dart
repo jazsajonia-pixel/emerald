@@ -337,7 +337,7 @@ class _AiSettingsScreenState extends ConsumerState<AiSettingsScreen> {
             ],
             const Divider(height: 32),
             Text(
-              'What this provider supports in Emerald',
+              'What this provider supports in Sapphire',
               style: Theme.of(context).textTheme.titleSmall,
             ),
             _cap('Text answers', caps.text),
@@ -361,7 +361,7 @@ class _AiSettingsScreenState extends ConsumerState<AiSettingsScreen> {
               'The key is stored encrypted with Android Keystore on this device. '
               'It is never written to your vault, never shown again after saving, '
               'and never logged. Requests go directly from your phone to the '
-              'provider; there is no Emerald server.',
+              'provider; there is no Sapphire server.',
             ),
             if (cfg.consented)
               TextButton(

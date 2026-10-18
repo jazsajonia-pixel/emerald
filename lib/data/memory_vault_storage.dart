@@ -155,4 +155,21 @@ class MemoryVaultStorage implements VaultStorage {
       p = VaultPath.parent(p);
     }
   }
+
+  @override
+  Future<void> deleteFile(
+    VaultHandle vault,
+    String path, {
+    required String expectedSha256,
+  }) async {
+    _check(vault);
+    final p = _valid(path);
+    final cur = _files[p];
+    if (cur == null) throw VaultException(VaultErrorCode.notFound, p);
+    if (sha256Hex(cur) != expectedSha256) {
+      throw VaultException(VaultErrorCode.conflict, p);
+    }
+    _files.remove(p);
+    _mtime.remove(p);
+  }
 }

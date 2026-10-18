@@ -1,4 +1,4 @@
-import 'package:emerald/features/links/link_parser.dart';
+import 'package:sapphire/features/links/link_parser.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

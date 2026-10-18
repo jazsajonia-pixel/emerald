@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:emerald/features/notes/note_codec.dart';
+import 'package:sapphire/features/notes/note_codec.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 Uint8List b(List<int> v) => Uint8List.fromList(v);

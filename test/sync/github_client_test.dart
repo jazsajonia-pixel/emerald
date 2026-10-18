@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:emerald/features/sync/git_hash.dart';
-import 'package:emerald/features/sync/github_client.dart';
+import 'package:sapphire/features/sync/git_hash.dart';
+import 'package:sapphire/features/sync/github_client.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';

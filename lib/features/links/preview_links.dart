@@ -3,11 +3,11 @@ import 'link_parser.dart';
 import 'link_resolver.dart';
 
 /// Rewrites links for the rendered preview so they can be tapped:
-/// resolved note links become `emerald-note:<path>`, broken ones
-/// `emerald-broken:<target>`. The note file itself is never modified.
+/// resolved note links become `sapphire-note:<path>`, broken ones
+/// `sapphire-broken:<target>`. The note file itself is never modified.
 abstract final class PreviewLinks {
-  static const noteScheme = 'emerald-note:';
-  static const brokenScheme = 'emerald-broken:';
+  static const noteScheme = 'sapphire-note:';
+  static const brokenScheme = 'sapphire-broken:';
 
   static String prepare(String text, String sourcePath, VaultIndex index) {
     final links = LinkParser.parse(text);

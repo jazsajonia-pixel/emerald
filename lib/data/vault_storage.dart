@@ -100,7 +100,7 @@ abstract interface class VaultStorage {
   /// was remembered but access is gone.
   Future<VaultHandle?> restoreVault();
 
-  /// Forgets the vault and releases Emerald's persisted permission. Never
+  /// Forgets the vault and releases Sapphire's persisted permission. Never
   /// touches the files.
   Future<void> forgetVault(VaultHandle vault);
 
@@ -130,4 +130,14 @@ abstract interface class VaultStorage {
 
   /// Creates a folder (and missing parents). Existing folders are fine.
   Future<void> createDirectory(VaultHandle vault, String path);
+
+  /// Deletes the file at [path] only if its current SHA-256 equals
+  /// [expectedSha256]; otherwise throws [VaultErrorCode.conflict]. Used only
+  /// by sync to mirror a deletion made on GitHub (after the old content was
+  /// saved to note history).
+  Future<void> deleteFile(
+    VaultHandle vault,
+    String path, {
+    required String expectedSha256,
+  });
 }

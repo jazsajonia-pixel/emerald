@@ -1,12 +1,12 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:emerald/features/sync/git_hash.dart';
-import 'package:emerald/features/sync/github_client.dart';
+import 'package:sapphire/features/sync/git_hash.dart';
+import 'package:sapphire/features/sync/github_client.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
-/// In-memory GitHub REST server implementing the endpoints Emerald uses,
+/// In-memory GitHub REST server implementing the endpoints Sapphire uses,
 /// with the documented semantics (sha required to update; mismatch → 409).
 class FakeGitHub {
   FakeGitHub({
@@ -28,6 +28,10 @@ class FakeGitHub {
 
   /// Called before handling a PUT; lets tests simulate a concurrent edit.
   void Function(String path)? beforePut;
+
+  /// Called before handling a DELETE; lets tests simulate a concurrent edit
+  /// after the local proposal write but before its removal.
+  void Function(String path)? beforeDelete;
 
   void set(String path, String content) =>
       files[path] = Uint8List.fromList(utf8.encode(content));
@@ -128,6 +132,7 @@ class FakeGitHub {
     }
     if (r.method == 'DELETE' && rest.isNotEmpty && rest[0] == 'contents') {
       final path = rest.sublist(1).join('/');
+      beforeDelete?.call(path);
       final body = jsonDecode(r.body) as Map<String, dynamic>;
       final current = files[path];
       if (current == null) return _j({'message': 'Not Found'}, 404);
