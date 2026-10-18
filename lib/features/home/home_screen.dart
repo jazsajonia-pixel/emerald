@@ -71,7 +71,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   color: theme.colorScheme.onPrimaryContainer,
                 ),
                 title: Text(
-                  '${_proposalCount} new AI ${_proposalCount == 1 ? 'proposal' : 'proposals'}',
+                  '$_proposalCount new AI ${_proposalCount == 1 ? 'proposal' : 'proposals'}',
                   style: TextStyle(color: theme.colorScheme.onPrimaryContainer),
                 ),
                 subtitle: Text(

@@ -1,6 +1,5 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
-import 'dart:ui';
 
 import 'package:emerald/features/graph/graph_layout.dart';
 import 'package:emerald/features/graph/graph_model.dart';

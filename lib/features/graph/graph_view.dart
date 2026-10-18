@@ -217,7 +217,7 @@ class _GraphPainter extends CustomPainter {
   }) : super(
          repaint: motion == null
              ? transform
-             : Listenable.merge([transform, motion!]),
+             : Listenable.merge([transform, motion]),
        );
 
   final GraphData data;
@@ -404,6 +404,7 @@ class _GraphPainter extends CustomPainter {
           ),
           properties: SemanticsProperties(
             label: data.nodes[i].title,
+            textDirection: TextDirection.ltr,
             hint: 'Tap for note actions. Long press to focus its local graph.',
             onTap: () => onNodeTap(data.nodes[i].path),
             onLongPress: onNodeLongPress == null

@@ -35,7 +35,6 @@ abstract final class EmeraldTheme {
           onError: const Color(0xFF690005),
           errorContainer: const Color(0xFF93000A),
           onErrorContainer: const Color(0xFFFFDAD6),
-          background: surface,
           surface: surface,
           surfaceDim: ink,
           surfaceBright: surfaceHighest,
