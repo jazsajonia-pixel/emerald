@@ -1,5 +1,5 @@
-import 'package:emerald/app/home_shell.dart';
-import 'package:emerald/core/ui/state_views.dart';
+import 'package:sapphire/app/home_shell.dart';
+import 'package:sapphire/core/ui/state_views.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -9,7 +9,7 @@ Future<void> _pumpAt(
   WidgetTester tester,
   Size size, {
   double textScale = 1.0,
-}) => pumpEmerald(tester, size: size, textScale: textScale);
+}) => pumpSapphire(tester, size: size, textScale: textScale);
 
 void main() {
   const phone = Size(360, 740);
@@ -31,7 +31,7 @@ void main() {
       AppDestination.graph: 'Graph',
       AppDestination.ai: 'AI Hub',
       AppDestination.settings: 'Settings',
-      AppDestination.home: 'Emerald',
+      AppDestination.home: 'Sapphire',
     };
     for (final entry in expectedTitles.entries) {
       await tester.tap(

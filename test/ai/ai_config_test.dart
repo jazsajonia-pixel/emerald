@@ -1,5 +1,5 @@
-import 'package:emerald/features/ai/ai_config.dart';
-import 'package:emerald/features/ai/ai_types.dart';
+import 'package:sapphire/features/ai/ai_config.dart';
+import 'package:sapphire/features/ai/ai_types.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 

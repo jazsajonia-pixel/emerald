@@ -1,11 +1,11 @@
-# Emerald — Development Phases and Acceptance Criteria
+# Sapphire — Development Phases and Acceptance Criteria
 
 This roadmap is designed for a phone-only project workflow using Perplexity with GitHub repository access. Work in small increments. Do not skip acceptance checks to reach the final APK faster.
 
 ## Phase 0 — Repository and build foundation
 
 ### Tasks
-- Inspect the existing `emerald` repository before changing anything.
+- Inspect the existing `sapphire` repository before changing anything.
 - Check whether it is empty or already contains work; preserve useful files.
 - Create a Flutter project with Android support and a documented package/application ID.
 - Add `.gitignore`, `README.md`, license decision placeholder if not supplied, and a concise architecture note.
@@ -20,10 +20,10 @@ This roadmap is designed for a phone-only project workflow using Perplexity with
 - APK is downloadable from a successful GitHub Actions run.
 - Main remains buildable.
 
-## Phase 1 — Emerald shell and navigation
+## Phase 1 — Sapphire shell and navigation
 
 ### Tasks
-- Build a mobile-first Material 3 interface with Emerald branding.
+- Build a mobile-first Material 3 interface with Sapphire branding.
 - Create navigation for Home, Brain/Notes, Graph, AI Hub, and Settings.
 - Add loading, empty, error, and permission-denied states.
 - Ensure touch targets, text scaling, contrast, and narrow-screen layouts are usable.
@@ -61,7 +61,7 @@ This roadmap is designed for a phone-only project workflow using Perplexity with
 - Build a local metadata/index database that can be regenerated from Markdown.
 - Search titles and contents.
 - Show backlinks and orphan/unlinked notes.
-- Refresh the index after Emerald writes files and provide a manual rescan for external edits.
+- Refresh the index after Sapphire writes files and provide a manual rescan for external edits.
 
 ### Acceptance criteria
 - Search returns correct matching notes.
@@ -114,7 +114,7 @@ This roadmap is designed for a phone-only project workflow using Perplexity with
 - Add more providers through the same interface, one at a time.
 - Research current official documentation before each integration.
 - Integrate external agents only through a verified supported API, protocol, or connector.
-- If MCP is used, document whether Emerald is an MCP client, whether a server is required, how it is hosted, and how authentication works.
+- If MCP is used, document whether Sapphire is an MCP client, whether a server is required, how it is hosted, and how authentication works.
 - Do not assume a remote agent can access Android storage directly.
 - Add a provider capability matrix showing which providers support text, tool use, streaming, and other required features.
 

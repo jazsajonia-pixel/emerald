@@ -1,4 +1,4 @@
-import 'package:emerald/features/search/vault_index.dart';
+import 'package:sapphire/features/search/vault_index.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 VaultIndex build(Map<String, String> files) => VaultIndex({
@@ -14,16 +14,16 @@ VaultIndex build(Map<String, String> files) => VaultIndex({
 void main() {
   final idx = build({
     'Home.md':
-        'Welcome. See [[Emerald]] and [plan](Projects/Plan.md). [[Ghost]]',
-    'Projects/Emerald.md': 'Graph app. Back to [[Home]]. Self [[Emerald]].',
+        'Welcome. See [[Sapphire]] and [plan](Projects/Plan.md). [[Ghost]]',
+    'Projects/Sapphire.md': 'Graph app. Back to [[Home]]. Self [[Sapphire]].',
     'Projects/Plan.md': 'Phases and milestones for the graph.',
     'Lonely.md': 'Nobody links here. Café crème.',
     'Ideen/Grüße.md': '日本語のメモ and [[Lonely Typo]]',
   });
 
   test('backlinks are consistent with links', () {
-    expect(idx.backlinks('Projects/Emerald.md'), ['Home.md']);
-    expect(idx.backlinks('Home.md'), ['Projects/Emerald.md']);
+    expect(idx.backlinks('Projects/Sapphire.md'), ['Home.md']);
+    expect(idx.backlinks('Home.md'), ['Projects/Sapphire.md']);
     expect(idx.backlinks('Projects/Plan.md'), ['Home.md']);
     expect(idx.backlinks('Lonely.md'), isEmpty);
     for (final (s, t) in idx.edges) {
@@ -32,7 +32,7 @@ void main() {
   });
 
   test('self-links are not edges or backlinks', () {
-    expect(idx.linkedTargets('Projects/Emerald.md'), {'Home.md'});
+    expect(idx.linkedTargets('Projects/Sapphire.md'), {'Home.md'});
   });
 
   test('broken links are reported', () {
@@ -49,10 +49,10 @@ void main() {
   test('search: title beats content, all terms must match', () {
     final hits = idx.search('graph');
     expect(hits.map((h) => h.path).toSet(), {
-      'Projects/Emerald.md',
+      'Projects/Sapphire.md',
       'Projects/Plan.md',
     });
-    expect(idx.search('emerald').first.path, 'Projects/Emerald.md');
+    expect(idx.search('sapphire').first.path, 'Projects/Sapphire.md');
     expect(idx.search('graph milestones').single.path, 'Projects/Plan.md');
     expect(idx.search('graph nonexistentword'), isEmpty);
     expect(idx.search('   '), isEmpty);

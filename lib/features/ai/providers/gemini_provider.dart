@@ -47,7 +47,7 @@ class GeminiProvider implements AiProvider {
   ProviderCapabilities get capabilities => const ProviderCapabilities(
     text: true,
     toolUse: true,
-    streaming: false, // the API supports it; Emerald does not use it yet
+    streaming: false, // the API supports it; Sapphire does not use it yet
     listModels: true,
   );
 

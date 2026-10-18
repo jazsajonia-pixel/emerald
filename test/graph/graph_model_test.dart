@@ -1,9 +1,9 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
 
-import 'package:emerald/features/graph/graph_layout.dart';
-import 'package:emerald/features/graph/graph_model.dart';
-import 'package:emerald/features/search/vault_index.dart';
+import 'package:sapphire/features/graph/graph_layout.dart';
+import 'package:sapphire/features/graph/graph_model.dart';
+import 'package:sapphire/features/search/vault_index.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 VaultIndex build(Map<String, String> files) => VaultIndex({

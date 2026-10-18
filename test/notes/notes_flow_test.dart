@@ -1,8 +1,8 @@
 import 'dart:convert';
 
-import 'package:emerald/core/ui/state_views.dart';
-import 'package:emerald/data/memory_vault_storage.dart';
-import 'package:emerald/data/vault_storage.dart';
+import 'package:sapphire/core/ui/state_views.dart';
+import 'package:sapphire/data/memory_vault_storage.dart';
+import 'package:sapphire/data/vault_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -13,7 +13,7 @@ const _vault = VaultHandle(id: 'memory://vault', name: 'My Vault');
 MemoryVaultStorage _storage({bool remembered = true}) => MemoryVaultStorage(
   files: {
     'Welcome.md': '# Welcome\n\nHello **world**.\n',
-    'Projects/Emerald.md': 'Build it.',
+    'Projects/Sapphire.md': 'Build it.',
   },
   vaultToPick: _vault,
   remembered: remembered ? _vault : null,
@@ -32,7 +32,7 @@ Future<void> _openBrain(WidgetTester tester) async {
 void main() {
   testWidgets('choose a vault and see its notes', (tester) async {
     final storage = _storage(remembered: false);
-    await pumpEmerald(tester, storage: storage);
+    await pumpSapphire(tester, storage: storage);
     await _openBrain(tester);
     expect(find.text('No vault selected'), findsOneWidget);
     await tester.tap(find.text('Choose vault folder'));
@@ -48,11 +48,11 @@ void main() {
   });
 
   testWidgets('browse into a folder and back up', (tester) async {
-    await pumpEmerald(tester, storage: _storage());
+    await pumpSapphire(tester, storage: _storage());
     await _openBrain(tester);
     await tester.tap(find.text('Projects'));
     await tester.pumpAndSettle();
-    expect(find.text('Emerald'), findsWidgets);
+    expect(find.text('Sapphire'), findsWidgets);
     await tester.tap(find.byTooltip('Up one folder'));
     await tester.pumpAndSettle();
     expect(find.text('Welcome'), findsOneWidget);
@@ -60,7 +60,7 @@ void main() {
 
   testWidgets('open, edit, save, close, and reopen a note', (tester) async {
     final storage = _storage();
-    await pumpEmerald(tester, storage: storage);
+    await pumpSapphire(tester, storage: storage);
     await _openBrain(tester);
     await tester.tap(find.text('Welcome'));
     await tester.pumpAndSettle();
@@ -87,7 +87,7 @@ void main() {
   });
 
   testWidgets('preview renders Markdown', (tester) async {
-    await pumpEmerald(tester, storage: _storage());
+    await pumpSapphire(tester, storage: _storage());
     await _openBrain(tester);
     await tester.tap(find.text('Welcome'));
     await tester.pumpAndSettle();
@@ -99,7 +99,7 @@ void main() {
 
   testWidgets('create a new note', (tester) async {
     final storage = _storage();
-    await pumpEmerald(tester, storage: storage);
+    await pumpSapphire(tester, storage: storage);
     await _openBrain(tester);
     await tester.tap(find.text('New note'));
     await tester.pumpAndSettle();
@@ -117,7 +117,7 @@ void main() {
     tester,
   ) async {
     final storage = _storage();
-    await pumpEmerald(tester, storage: storage);
+    await pumpSapphire(tester, storage: storage);
     await _openBrain(tester);
     await tester.tap(find.text('New note'));
     await tester.pumpAndSettle();
@@ -135,7 +135,7 @@ void main() {
     tester,
   ) async {
     final storage = _storage();
-    await pumpEmerald(tester, storage: storage);
+    await pumpSapphire(tester, storage: storage);
     await _openBrain(tester);
     await tester.tap(find.text('Welcome'));
     await tester.pumpAndSettle();
@@ -144,7 +144,7 @@ void main() {
     storage.setFile('Welcome.md', 'theirs');
     await tester.tap(find.byTooltip('Save'));
     await tester.pumpAndSettle();
-    expect(find.text('Note changed outside Emerald'), findsOneWidget);
+    expect(find.text('Note changed outside Sapphire'), findsOneWidget);
     await tester.tap(find.text('Save mine as a copy'));
     await tester.pumpAndSettle();
     expect(utf8.decode(storage.bytesOf('Welcome.md')!), 'theirs');
@@ -157,7 +157,7 @@ void main() {
 
   testWidgets('leaving with unsaved changes asks first', (tester) async {
     final storage = _storage();
-    await pumpEmerald(tester, storage: storage);
+    await pumpSapphire(tester, storage: storage);
     await _openBrain(tester);
     await tester.tap(find.text('Welcome'));
     await tester.pumpAndSettle();
@@ -181,7 +181,7 @@ void main() {
     tester,
   ) async {
     final storage = _storage()..accessRevoked = true;
-    await pumpEmerald(tester, storage: storage);
+    await pumpSapphire(tester, storage: storage);
     await _openBrain(tester);
     expect(find.byType(PermissionDeniedView), findsOneWidget);
     await tester.tap(find.text('Choose folder again'));
@@ -190,7 +190,7 @@ void main() {
   });
 
   testWidgets('empty vault shows an empty state', (tester) async {
-    await pumpEmerald(
+    await pumpSapphire(
       tester,
       storage: MemoryVaultStorage(vaultToPick: _vault, remembered: _vault),
     );

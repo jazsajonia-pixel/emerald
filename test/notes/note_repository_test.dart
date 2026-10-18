@@ -2,10 +2,10 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:emerald/data/memory_vault_storage.dart';
-import 'package:emerald/data/vault_storage.dart';
-import 'package:emerald/features/notes/note_history.dart';
-import 'package:emerald/features/notes/note_repository.dart';
+import 'package:sapphire/data/memory_vault_storage.dart';
+import 'package:sapphire/data/vault_storage.dart';
+import 'package:sapphire/features/notes/note_history.dart';
+import 'package:sapphire/features/notes/note_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 Matcher throwsVault(VaultErrorCode code) =>
@@ -23,7 +23,7 @@ void main() {
       files: {'Inbox/Idea.md': '# Idea\n', 'Readme.md': 'hello'},
       remembered: vault,
     );
-    tmp = await Directory.systemTemp.createTemp('emerald_history');
+    tmp = await Directory.systemTemp.createTemp('sapphire_history');
     history = FileNoteHistory(() async => tmp, maxPerNote: 3);
     repo = NoteRepository(storage, history);
   });

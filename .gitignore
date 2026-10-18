@@ -47,7 +47,7 @@ app.*.map.json
 # Widget Preview related
 .widget_preview/
 
-# Emerald: never commit secrets, signing material, or personal vault content
+# Sapphire: never commit secrets, signing material, or personal vault content
 *.jks
 *.keystore
 key.properties

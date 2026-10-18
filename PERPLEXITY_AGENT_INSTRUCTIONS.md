@@ -1,13 +1,13 @@
-# Instructions for Perplexity — Build Emerald in the `emerald` GitHub Repository
+# Instructions for Perplexity — Build Sapphire in the `sapphire` GitHub Repository
 
-You are the implementation agent for **Emerald**, a Flutter/Dart Android application. The owner is developing entirely from an Android phone and uses your GitHub repository access to collaborate. Your task is to implement the product incrementally, test it, and produce a genuinely downloadable APK.
+You are the implementation agent for **Sapphire**, a Flutter/Dart Android application. The owner is developing entirely from an Android phone and uses your GitHub repository access to collaborate. Your task is to implement the product incrementally, test it, and produce a genuinely downloadable APK.
 
 Read `README_PROJECT.md` and `DEVELOPMENT_PHASES.md` before making changes. Treat them as the product specification and acceptance checklist.
 
 ## Operating rules
 
 1. **Inspect before acting.** Inspect the repository, branch, current files, workflows, and project status before editing. Preserve existing work. Do not assume the repository is empty.
-2. **Use the repository named `emerald`.** Verify the repository and permissions before writing. Do not create or modify a similarly named repository without asking.
+2. **Use the repository named `sapphire`.** Verify the repository and permissions before writing. Do not create or modify a similarly named repository without asking.
 3. **Work in small phases.** Implement the earliest incomplete phase first. Do not generate a large untested code dump. Keep each change focused and buildable.
 4. **Use Flutter and Dart.** Target Android first. Choose stable, mutually compatible dependency versions based on current official docs and package maintenance.
 5. **Verify facts.** Before implementing AI APIs, Android storage access, MCP, or third-party integrations, check current official documentation. Never invent endpoints, SDK methods, secrets, or capabilities.
@@ -21,7 +21,7 @@ Read `README_PROJECT.md` and `DEVELOPMENT_PHASES.md` before making changes. Trea
 
 ## Product requirements
 
-- Emerald is an Android app built with Flutter and Dart.
+- Sapphire is an Android app built with Flutter and Dart.
 - User-owned `.md` files are the source of truth and must remain portable to Obsidian.
 - Local-first behavior must work without an AI provider or network connection for basic vault operations.
 - Use Android's supported folder/document picker and persist access as permitted. Do not assume arbitrary filesystem access from a URI.
@@ -56,7 +56,7 @@ The finished workflow must build a **real `.apk` file**, not just publish source
 - Use a documented Flutter stable toolchain and Android SDK setup.
 - Run `flutter pub get`, formatting validation, `flutter analyze`, and tests.
 - Build a release-mode APK when checks pass.
-- Upload the APK using the GitHub Actions artifact mechanism with a clear name, e.g. `emerald-android-apk`.
+- Upload the APK using the GitHub Actions artifact mechanism with a clear name, e.g. `sapphire-android-apk`.
 - Use a unique artifact name or run-specific name if needed.
 - Ensure the artifact path matches the actual output from the Flutter build.
 - Add concise instructions explaining how the user can download the APK from the successful Actions run on a phone.
@@ -90,4 +90,4 @@ When reporting progress, use:
 - **Known issues / unverified behavior**
 - **Next step**
 
-Begin by inspecting the `emerald` repository and reading both project documents. Then implement Phase 0. Continue through the roadmap in order, making incremental verified changes. Do not stop after only writing a plan if repository tools allow implementation.
+Begin by inspecting the `sapphire` repository and reading both project documents. Then implement Phase 0. Continue through the roadmap in order, making incremental verified changes. Do not stop after only writing a plan if repository tools allow implementation.

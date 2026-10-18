@@ -1,4 +1,4 @@
-package io.github.jazsajonia.emerald
+package io.github.jazsajonia.sapphire
 
 import android.app.Activity
 import android.content.ContentResolver
@@ -18,10 +18,10 @@ import java.security.MessageDigest
 import java.util.concurrent.Executors
 
 /**
- * Storage Access Framework bridge for Emerald's vault.
+ * Storage Access Framework bridge for Sapphire's vault.
  *
  * Design:
- * - The vault is a document tree chosen with ACTION_OPEN_DOCUMENT_TREE. Emerald
+ * - The vault is a document tree chosen with ACTION_OPEN_DOCUMENT_TREE. Sapphire
  *   takes a persistable read/write grant and remembers the tree URI.
  * - Dart only ever sends vault-relative paths ("Folder/Note.md"). They are
  *   resolved here by walking child documents of the tree by display name, so a
@@ -36,9 +36,9 @@ class VaultChannel(private val activity: Activity, messenger: BinaryMessenger) :
     MethodChannel.MethodCallHandler {
 
     companion object {
-        const val CHANNEL = "io.github.jazsajonia.emerald/vault"
+        const val CHANNEL = "io.github.jazsajonia.sapphire/vault"
         private const val REQUEST_PICK = 0x4E4D // "EM"
-        private const val PREFS = "emerald_vault"
+        private const val PREFS = "sapphire_vault"
         private const val KEY_TREE = "tree_uri"
         private const val MAX_FILE_BYTES = 8L * 1024 * 1024
         private const val MAX_ENTRIES = 20000
@@ -111,6 +111,13 @@ class VaultChannel(private val activity: Activity, messenger: BinaryMessenger) :
             call.argument<String>("path")!!,
             call.argument<ByteArray>("bytes")!!,
         )
+        "deleteFile" -> {
+            deleteFile(
+                tree(call),
+                call.argument<String>("path")!!,
+                call.argument<String>("expectedSha256")!!,
+            ); null
+        }
         "createDirectory" -> {
             ensureDirectory(tree(call), segments(call.argument<String>("path")!!)); null
         }
@@ -434,5 +441,20 @@ class VaultChannel(private val activity: Activity, messenger: BinaryMessenger) :
         writeVerified(tree, created, bytes, null)
         val finalPath = (parentSegs + created.name).joinToString("/")
         return stamp(tree, created, bytes) + ("path" to finalPath)
+    }
+
+    private fun deleteFile(tree: Uri, path: String, expected: String) {
+        val doc = resolve(tree, path)
+        if (doc.isDir) throw VaultError("NOT_FOUND", "That is a folder.")
+        if (doc.flags and Document.FLAG_SUPPORTS_DELETE == 0) {
+            throw VaultError("READ_ONLY", "This file cannot be deleted.")
+        }
+        val current = readBytes(docUri(tree, doc.id))
+        if (sha256(current) != expected) {
+            throw VaultError("CONFLICT", "The file changed since it was compared.")
+        }
+        if (!DocumentsContract.deleteDocument(resolver, docUri(tree, doc.id))) {
+            throw VaultError("IO", "Could not delete the file.")
+        }
     }
 }

@@ -1,13 +1,13 @@
 import 'dart:convert';
 
-import 'package:emerald/data/memory_vault_storage.dart';
-import 'package:emerald/data/vault_storage.dart';
-import 'package:emerald/features/ai/ai_types.dart';
-import 'package:emerald/features/ai/proposals.dart';
-import 'package:emerald/features/ai/tools/vault_tools.dart';
-import 'package:emerald/features/notes/note_history.dart';
-import 'package:emerald/features/notes/note_repository.dart';
-import 'package:emerald/features/search/vault_index.dart';
+import 'package:sapphire/data/memory_vault_storage.dart';
+import 'package:sapphire/data/vault_storage.dart';
+import 'package:sapphire/features/ai/ai_types.dart';
+import 'package:sapphire/features/ai/proposals.dart';
+import 'package:sapphire/features/ai/tools/vault_tools.dart';
+import 'package:sapphire/features/notes/note_history.dart';
+import 'package:sapphire/features/notes/note_repository.dart';
+import 'package:sapphire/features/search/vault_index.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 const vault = VaultHandle(id: 'memory://vault', name: 'V');
@@ -19,8 +19,8 @@ void main() {
   var ids = 0;
 
   final files = {
-    'Home.md': 'Start [[Emerald]] and [[Plan]].',
-    'Projects/Emerald.md': 'Graph app. [[Plan]]',
+    'Home.md': 'Start [[Sapphire]] and [[Plan]].',
+    'Projects/Sapphire.md': 'Graph app. [[Plan]]',
     'Projects/Plan.md': 'Milestones.',
     'Other.md': 'Links [[Plan]] too.',
   };
@@ -73,7 +73,7 @@ void main() {
     final r = await run('search_notes', {'query': 'milestones'});
     expect((r['results'] as List).single['path'], 'Projects/Plan.md');
     final l = await run('list_notes', {'folder': 'Projects'});
-    expect(l['notes'], ['Projects/Emerald.md', 'Projects/Plan.md']);
+    expect(l['notes'], ['Projects/Plan.md', 'Projects/Sapphire.md']);
     expect(tools.sharedNotes, isEmpty); // titles/paths only, no content
   });
 
@@ -83,8 +83,8 @@ void main() {
     expect(tools.sharedNotes, {'Projects/Plan.md'});
     // Bare title and missing extension are accepted when unambiguous.
     expect(
-      (await run('read_note', {'path': 'Emerald'}))['path'],
-      'Projects/Emerald.md',
+      (await run('read_note', {'path': 'Sapphire'}))['path'],
+      'Projects/Sapphire.md',
     );
     expect(
       (await run('read_note', {'path': 'Projects/Plan'}))['path'],
@@ -134,13 +134,13 @@ void main() {
   test('backlinks and related notes are based on explicit links', () async {
     expect(
       (await run('find_backlinks', {'path': 'Projects/Plan.md'}))['backlinks'],
-      ['Home.md', 'Other.md', 'Projects/Emerald.md'],
+      ['Home.md', 'Other.md', 'Projects/Sapphire.md'],
     );
     final rel = await run('find_related_notes', {'path': 'Other.md'});
     expect(rel['links_to'], ['Projects/Plan.md']);
     expect(
       rel['shares_links_with'],
-      containsAll(['Home.md', 'Projects/Emerald.md']),
+      containsAll(['Home.md', 'Projects/Sapphire.md']),
     );
   });
 

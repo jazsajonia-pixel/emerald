@@ -81,7 +81,7 @@ class _HomeShellState extends State<HomeShell> {
               NavigationRail(
                 leading: const Padding(
                   padding: EdgeInsets.only(top: 12, bottom: 18),
-                  child: EmeraldMark(size: 38),
+                  child: SapphireMark(size: 38),
                 ),
                 selectedIndex: _current.index,
                 onDestinationSelected: (i) => _go(AppDestination.values[i]),

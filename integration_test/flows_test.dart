@@ -7,14 +7,14 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:emerald/app/app.dart';
-import 'package:emerald/data/memory_vault_storage.dart';
-import 'package:emerald/data/saf_vault_storage.dart';
-import 'package:emerald/data/vault_storage.dart';
-import 'package:emerald/features/ai/ai_config.dart';
-import 'package:emerald/features/notes/note_history.dart';
-import 'package:emerald/features/sync/sync_state_store.dart';
-import 'package:emerald/features/vault/vault_controller.dart';
+import 'package:sapphire/app/app.dart';
+import 'package:sapphire/data/memory_vault_storage.dart';
+import 'package:sapphire/data/saf_vault_storage.dart';
+import 'package:sapphire/data/vault_storage.dart';
+import 'package:sapphire/features/ai/ai_config.dart';
+import 'package:sapphire/features/notes/note_history.dart';
+import 'package:sapphire/features/sync/sync_state_store.dart';
+import 'package:sapphire/features/vault/vault_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -60,7 +60,7 @@ void main() {
           vaultStorageProvider.overrideWithValue(storage),
           secretStoreProvider.overrideWithValue(MemorySecretStore()),
         ],
-        child: const EmeraldApp(reduceMotion: true),
+        child: const SapphireApp(reduceMotion: true),
       ),
     );
     await tester.pumpAndSettle();
@@ -117,7 +117,7 @@ void main() {
 
   testWidgets('Keystore-backed secure storage works on device', (tester) async {
     final store = SecureSecretStore();
-    const key = 'emerald.integration.check';
+    const key = 'sapphire.integration.check';
     await store.write(key, 'value-1');
     expect(await store.read(key), 'value-1');
     await store.delete(key);

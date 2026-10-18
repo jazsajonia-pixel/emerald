@@ -2,8 +2,8 @@
 // .github/workflows/android.yml, job "emulator-smoke"). It uses the real
 // Storage Access Framework channel, so it verifies the Kotlin bridge is wired
 // up, but it cannot drive the system folder picker itself.
-import 'package:emerald/app/app.dart';
-import 'package:emerald/app/home_shell.dart';
+import 'package:sapphire/app/app.dart';
+import 'package:sapphire/app/home_shell.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -16,7 +16,7 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      const ProviderScope(child: EmeraldApp(reduceMotion: true)),
+      const ProviderScope(child: SapphireApp(reduceMotion: true)),
     );
     await tester.pumpAndSettle(const Duration(seconds: 2));
 

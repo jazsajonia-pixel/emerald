@@ -79,7 +79,7 @@ final chatControllerProvider = NotifierProvider<ChatController, ChatState>(
 );
 
 const systemPrompt = '''
-You are the assistant inside Emerald, a local-first Markdown notes app. The
+You are the assistant inside Sapphire, a local-first Markdown notes app. The
 user's notes live in a vault folder on their phone. Use the tools to search
 and read notes before answering questions about them, and cite note titles
 you used. To change notes, use create_note or update_note: these only create
@@ -193,7 +193,7 @@ class ChatController extends Notifier<ChatState> {
           .noteWritten(doc.path, doc.stamp);
       _history.add(
         UserMessage(
-          '[Emerald] The user approved proposal ${p.id}; it was applied to ${doc.path}.',
+          '[Sapphire] The user approved proposal ${p.id}; it was applied to ${doc.path}.',
         ),
       );
       state = state.copyWith(bump: true);
@@ -209,7 +209,7 @@ class ChatController extends Notifier<ChatState> {
   void reject(NoteProposal p) {
     if (p.status != ProposalStatus.pending) return;
     p.status = ProposalStatus.rejected;
-    _history.add(UserMessage('[Emerald] The user rejected proposal ${p.id}.'));
+    _history.add(UserMessage('[Sapphire] The user rejected proposal ${p.id}.'));
     state = state.copyWith(bump: true);
   }
 }

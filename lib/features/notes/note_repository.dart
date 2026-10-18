@@ -27,10 +27,13 @@ class NoteDocument {
 }
 
 class NoteRepository {
-  NoteRepository(this._storage, this._history);
+  NoteRepository(this._storage, this._history, {this.onWrite});
 
   final VaultStorage _storage;
   final NoteHistory _history;
+
+  /// Called after every successful write (used to trigger auto sync).
+  final void Function()? onWrite;
 
   static NoteDocument _doc(String path, FileContent c) => NoteDocument(
     path: path,
@@ -69,6 +72,7 @@ class NoteRepository {
       bytes,
       expectedSha256: doc.stamp.sha256,
     );
+    onWrite?.call();
     return NoteDocument(
       path: doc.path,
       decoded: NoteCodec.decode(bytes),
@@ -101,6 +105,7 @@ class NoteRepository {
       path,
       NoteCodec.encode(content ?? ''),
     );
+    onWrite?.call();
     return open(vault, created.path);
   }
 
@@ -143,6 +148,7 @@ class NoteRepository {
       path,
       NoteCodec.encode(text),
     );
+    onWrite?.call();
     return open(vault, created.path);
   }
 }

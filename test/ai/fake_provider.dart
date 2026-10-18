@@ -1,4 +1,4 @@
-import 'package:emerald/features/ai/ai_types.dart';
+import 'package:sapphire/features/ai/ai_types.dart';
 
 /// Scripted provider for tests: returns the queued responses in order and
 /// records every request.

@@ -1,11 +1,11 @@
-import 'package:emerald/features/links/link_parser.dart';
-import 'package:emerald/features/links/link_resolver.dart';
+import 'package:sapphire/features/links/link_parser.dart';
+import 'package:sapphire/features/links/link_resolver.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   final resolver = LinkResolver([
     'Home.md',
-    'Projects/Emerald.md',
+    'Projects/Sapphire.md',
     'Projects/Plan.md',
     'Archive/Plan.md',
     'Deep/Nested/Leaf.md',
@@ -17,9 +17,9 @@ void main() {
       resolver.resolve(source, LinkParser.parse(text).single);
 
   test('wiki link by title', () {
-    final x = r('Home.md', '[[Emerald]]');
+    final x = r('Home.md', '[[Sapphire]]');
     expect(x.status, LinkStatus.resolved);
-    expect(x.targetPath, 'Projects/Emerald.md');
+    expect(x.targetPath, 'Projects/Sapphire.md');
   });
 
   test('wiki link is case-insensitive', () {
@@ -27,7 +27,7 @@ void main() {
   });
 
   test('duplicate names: same folder preferred, marked ambiguous', () {
-    final fromProjects = r('Projects/Emerald.md', '[[Plan]]');
+    final fromProjects = r('Projects/Sapphire.md', '[[Plan]]');
     expect(fromProjects.status, LinkStatus.ambiguous);
     expect(fromProjects.targetPath, 'Projects/Plan.md');
     expect(fromProjects.candidates, hasLength(2));
@@ -42,7 +42,7 @@ void main() {
   });
 
   test('wiki link with .md extension', () {
-    expect(r('Home.md', '[[Emerald.md]]').targetPath, 'Projects/Emerald.md');
+    expect(r('Home.md', '[[Sapphire.md]]').targetPath, 'Projects/Sapphire.md');
   });
 
   test('broken and missing/renamed notes', () {
@@ -52,17 +52,17 @@ void main() {
 
   test('markdown relative links', () {
     expect(
-      r('Projects/Emerald.md', '[p](Plan.md)').targetPath,
+      r('Projects/Sapphire.md', '[p](Plan.md)').targetPath,
       'Projects/Plan.md',
     );
-    expect(r('Projects/Emerald.md', '[h](../Home.md)').targetPath, 'Home.md');
+    expect(r('Projects/Sapphire.md', '[h](../Home.md)').targetPath, 'Home.md');
     expect(
-      r('Projects/Emerald.md', '[a](../Archive/Plan.md)').targetPath,
+      r('Projects/Sapphire.md', '[a](../Archive/Plan.md)').targetPath,
       'Archive/Plan.md',
     );
     expect(
-      r('Home.md', '[e](Projects/Emerald)').targetPath,
-      'Projects/Emerald.md',
+      r('Home.md', '[e](Projects/Sapphire)').targetPath,
+      'Projects/Sapphire.md',
     );
     expect(r('Deep/Nested/Leaf.md', '[r](/Home.md)').targetPath, 'Home.md');
     expect(
@@ -74,7 +74,7 @@ void main() {
   test('links cannot escape the vault', () {
     expect(r('Home.md', '[x](../secret.md)').status, LinkStatus.outsideVault);
     expect(
-      r('Projects/Emerald.md', '[x](../../../etc/passwd.md)').status,
+      r('Projects/Sapphire.md', '[x](../../../etc/passwd.md)').status,
       LinkStatus.outsideVault,
     );
     expect(r('Home.md', '[[../secret]]').status, LinkStatus.outsideVault);

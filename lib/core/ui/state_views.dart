@@ -128,7 +128,7 @@ class PermissionDeniedView extends StatelessWidget {
     icon: Icons.folder_off_outlined,
     title: 'Vault access was lost',
     message:
-        'Android no longer allows Emerald to read this folder. This can '
+        'Android no longer allows Sapphire to read this folder. This can '
         'happen if the folder was moved, deleted, or access was revoked. '
         'Your notes are not deleted — choose the folder again to continue.',
     isError: true,

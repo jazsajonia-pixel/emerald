@@ -1,6 +1,6 @@
-# Emerald architecture
+# Sapphire architecture
 
-Emerald keeps UI, Markdown storage, AI integrations, and sync separate so each
+Sapphire keeps UI, Markdown storage, AI integrations, and sync separate so each
 can evolve (or be replaced) without touching the others.
 
 ```

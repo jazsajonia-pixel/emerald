@@ -1,8 +1,7 @@
-import 'package:emerald/data/memory_vault_storage.dart';
-import 'package:emerald/data/vault_storage.dart';
-import 'package:emerald/features/graph/graph_layout.dart';
-import 'package:emerald/features/graph/graph_screen.dart';
-import 'package:emerald/features/graph/graph_view.dart';
+import 'package:sapphire/data/memory_vault_storage.dart';
+import 'package:sapphire/data/vault_storage.dart';
+import 'package:sapphire/features/graph/graph_screen.dart';
+import 'package:sapphire/features/graph/graph_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -31,28 +30,21 @@ Future<void> _graph(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
-/// Global screen position of the node with [title], using the painter's
-/// layout through the GraphView widget.
+/// Global screen position of the node with [title], as currently drawn.
 Offset _nodePosition(WidgetTester tester, String title) {
   final view = tester.widget<GraphView>(find.byType(GraphView));
   final i = view.data.nodes.indexWhere((n) => n.title == title);
   expect(i, isNot(-1), reason: 'node $title');
+  final state = tester.state<GraphViewState>(find.byType(GraphView));
   final box = tester.renderObject<RenderBox>(find.byKey(GraphView.canvasKey));
-  final projection = const GraphProjection();
-  final point = projection.projectRotating(
-    Offset(view.layout.x(i), view.layout.y(i)),
-    origin: Offset(view.layout.width / 2, view.layout.height / 2),
-    depth: projection.depthFor(i, view.data.nodes[i].degree),
-    rotation: 0,
-  );
-  return box.localToGlobal(point);
+  return box.localToGlobal(state.nodeOffset(view.data.nodes[i].path)!);
 }
 
 void main() {
   testWidgets('global graph shows all notes and explicit links', (
     tester,
   ) async {
-    await pumpEmerald(tester, storage: _storage());
+    await pumpSapphire(tester, storage: _storage());
     await _graph(tester);
     expect(find.byType(GraphView), findsOneWidget);
     expect(find.text('4 notes · 2 links'), findsOneWidget);
@@ -61,7 +53,7 @@ void main() {
   });
 
   testWidgets('graph auto-rotation can be paused and resumed', (tester) async {
-    await pumpEmerald(tester, storage: _storage());
+    await pumpSapphire(tester, storage: _storage());
     await _graph(tester);
     expect(find.byTooltip('Pause graph rotation'), findsOneWidget);
     await tester.tap(find.byTooltip('Pause graph rotation'));
@@ -75,7 +67,7 @@ void main() {
   testWidgets('graph can switch between perspective 3D and flat 2D', (
     tester,
   ) async {
-    await pumpEmerald(tester, storage: _storage());
+    await pumpSapphire(tester, storage: _storage());
     await _graph(tester);
     expect(find.text('3D perspective · auto-rotating'), findsOneWidget);
     expect(
@@ -97,23 +89,17 @@ void main() {
   testWidgets('camera controls adjust orbit, tilt, zoom, and reset', (
     tester,
   ) async {
-    await pumpEmerald(tester, storage: _storage());
+    await pumpSapphire(tester, storage: _storage());
     await _graph(tester);
     await tester.tap(find.byTooltip('Camera controls'));
     await tester.pumpAndSettle();
 
-    final initialScale = tester
-        .widget<InteractiveViewer>(find.byType(InteractiveViewer))
-        .transformationController!
-        .value
-        .getMaxScaleOnAxis();
+    double scale() =>
+        tester.state<GraphViewState>(find.byType(GraphView)).cameraScale;
+    final initialScale = scale();
     await tester.tap(find.byTooltip('Zoom in'));
     await tester.pumpAndSettle();
-    final zoomedScale = tester
-        .widget<InteractiveViewer>(find.byType(InteractiveViewer))
-        .transformationController!
-        .value
-        .getMaxScaleOnAxis();
+    final zoomedScale = scale();
     expect(zoomedScale, greaterThan(initialScale));
     await tester.tap(find.byTooltip('Reset zoom'));
     await tester.pumpAndSettle();
@@ -147,7 +133,7 @@ void main() {
   testWidgets('tapping a node offers actions and opens the selected note', (
     tester,
   ) async {
-    await pumpEmerald(tester, storage: _storage());
+    await pumpSapphire(tester, storage: _storage());
     await _graph(tester);
     await tester.tapAt(_nodePosition(tester, 'Gamma'));
     await tester.pumpAndSettle();
@@ -159,7 +145,7 @@ void main() {
   });
 
   testWidgets('pin action marks a node in the graph legend', (tester) async {
-    await pumpEmerald(tester, storage: _storage());
+    await pumpSapphire(tester, storage: _storage());
     await _graph(tester);
     await tester.tapAt(_nodePosition(tester, 'Beta'));
     await tester.pumpAndSettle();
@@ -168,12 +154,42 @@ void main() {
     expect(find.textContaining('1 pinned'), findsOneWidget);
   });
 
-  testWidgets('long-press opens the local graph; back returns to global', (
+  testWidgets('holding and dragging a node pulls its linked notes along', (
     tester,
   ) async {
-    await pumpEmerald(tester, storage: _storage());
+    await pumpSapphire(tester, storage: _storage());
     await _graph(tester);
-    await tester.longPressAt(_nodePosition(tester, 'Beta'));
+    final state = tester.state<GraphViewState>(find.byType(GraphView));
+    final alpha = _nodePosition(tester, 'Alpha');
+    final beta = _nodePosition(tester, 'Beta');
+    final lonely = _nodePosition(tester, 'Lonely');
+    final g = await tester.startGesture(alpha);
+    await tester.pump();
+    // Grabbing highlights the node and its links.
+    expect(state.highlightedPath, 'Alpha.md');
+    for (var i = 0; i < 6; i++) {
+      await g.moveBy(const Offset(12, 10));
+      await tester.pump();
+    }
+    final betaMoved = _nodePosition(tester, 'Beta') - beta;
+    final lonelyMoved = _nodePosition(tester, 'Lonely') - lonely;
+    expect((_nodePosition(tester, 'Alpha') - alpha).distance, greaterThan(40));
+    expect(betaMoved.distance, greaterThan(lonelyMoved.distance + 10));
+    await g.up();
+    await tester.pumpAndSettle();
+    // Dragging is not a tap: no action sheet; highlight fades.
+    expect(find.text('Focus local graph'), findsNothing);
+    expect(state.highlightedPath, isNull);
+  });
+
+  testWidgets('focus action opens the local graph; back returns to global', (
+    tester,
+  ) async {
+    await pumpSapphire(tester, storage: _storage());
+    await _graph(tester);
+    await tester.tapAt(_nodePosition(tester, 'Beta'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('graph-node-focus')));
     await tester.pumpAndSettle();
     expect(find.text('Local: Beta'), findsOneWidget);
     expect(find.text('2 notes · 1 links'), findsOneWidget);
@@ -188,7 +204,7 @@ void main() {
   });
 
   testWidgets('hide unlinked notes filter', (tester) async {
-    await pumpEmerald(tester, storage: _storage());
+    await pumpSapphire(tester, storage: _storage());
     await _graph(tester);
     await tester.tap(find.byTooltip('Graph options'));
     await tester.pumpAndSettle();
@@ -198,7 +214,7 @@ void main() {
   });
 
   testWidgets('search highlights matching nodes', (tester) async {
-    await pumpEmerald(tester, storage: _storage());
+    await pumpSapphire(tester, storage: _storage());
     await _graph(tester);
     await tester.tap(find.byTooltip('Highlight notes'));
     await tester.pumpAndSettle();
@@ -211,7 +227,7 @@ void main() {
   });
 
   testWidgets('graph updates after a note gains a link', (tester) async {
-    await pumpEmerald(tester, storage: _storage());
+    await pumpSapphire(tester, storage: _storage());
     await _graph(tester);
     expect(find.text('4 notes · 2 links'), findsOneWidget);
     await tester.tapAt(_nodePosition(tester, 'Lonely'));
@@ -234,7 +250,7 @@ void main() {
     tester,
   ) async {
     final storage = _storage();
-    await pumpEmerald(tester, storage: storage);
+    await pumpSapphire(tester, storage: storage);
     storage.setFile('Gamma.md', 'Now links [[Lonely]] and [[Delta]]');
     storage.setFile('Delta.md', 'new');
     await tester.tap(
@@ -251,7 +267,7 @@ void main() {
   });
 
   testWidgets('empty vault shows an empty state', (tester) async {
-    await pumpEmerald(
+    await pumpSapphire(
       tester,
       storage: MemoryVaultStorage(vaultToPick: _vault, remembered: _vault),
     );
@@ -260,7 +276,7 @@ void main() {
   });
 
   testWidgets('local graph from the note menu', (tester) async {
-    await pumpEmerald(tester, storage: _storage());
+    await pumpSapphire(tester, storage: _storage());
     await tester.tap(
       find.descendant(
         of: find.byType(NavigationBar),
@@ -280,7 +296,7 @@ void main() {
   });
 
   testWidgets('pinch-zoom/pan does not throw', (tester) async {
-    await pumpEmerald(tester, storage: _storage());
+    await pumpSapphire(tester, storage: _storage());
     await _graph(tester);
     final center = tester.getCenter(find.byType(GraphView));
     final g1 = await tester.startGesture(center - const Offset(20, 0));

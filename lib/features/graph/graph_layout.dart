@@ -31,7 +31,7 @@ class GraphLayout {
   }
 }
 
-/// Perspective projection helpers for Emerald's animated 3D graph view.
+/// Perspective projection helpers for Sapphire's animated 3D graph view.
 ///
 /// The force layout stays deterministic and inexpensive in 2D. The graph view
 /// lifts its nodes into a shallow 3D volume and rotates that volume before

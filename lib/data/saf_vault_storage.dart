@@ -9,7 +9,7 @@ class SafVaultStorage implements VaultStorage {
   SafVaultStorage([MethodChannel? channel])
     : _channel = channel ?? const MethodChannel(channelName);
 
-  static const channelName = 'io.github.jazsajonia.emerald/vault';
+  static const channelName = 'io.github.jazsajonia.sapphire/vault';
   final MethodChannel _channel;
 
   Future<T?> _call<T>(String method, [Map<String, Object?>? args]) async {
@@ -140,6 +140,17 @@ class SafVaultStorage implements VaultStorage {
   @override
   Future<void> createDirectory(VaultHandle vault, String path) =>
       _call<void>('createDirectory', {'uri': vault.id, 'path': _valid(path)});
+
+  @override
+  Future<void> deleteFile(
+    VaultHandle vault,
+    String path, {
+    required String expectedSha256,
+  }) => _call<void>('deleteFile', {
+    'uri': vault.id,
+    'path': _valid(path),
+    'expectedSha256': expectedSha256,
+  });
 
   /// App-private directory (not inside the vault) for history/cache data.
   Future<String> appFilesDir() async => (await _call<String>('appFilesDir'))!;

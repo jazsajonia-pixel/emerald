@@ -1,9 +1,9 @@
 import 'dart:convert';
 
-import 'package:emerald/data/memory_vault_storage.dart';
-import 'package:emerald/data/vault_storage.dart';
-import 'package:emerald/features/ai/ai_config.dart';
-import 'package:emerald/features/ai/ai_types.dart';
+import 'package:sapphire/data/memory_vault_storage.dart';
+import 'package:sapphire/data/vault_storage.dart';
+import 'package:sapphire/features/ai/ai_config.dart';
+import 'package:sapphire/features/ai/ai_types.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -36,7 +36,7 @@ void main() {
     (tester) async {
       final secrets = MemorySecretStore();
       final keys = <String>[];
-      await pumpEmerald(
+      await pumpSapphire(
         tester,
         secrets: secrets,
         aiFactory: (s) {
@@ -90,7 +90,7 @@ void main() {
   testWidgets('settings: connection errors are shown in plain language', (
     tester,
   ) async {
-    await pumpEmerald(tester, aiFactory: (s) => _FailingProvider());
+    await pumpSapphire(tester, aiFactory: (s) => _FailingProvider());
     await _openAi(tester);
     await tester.tap(find.text('Set up a provider'));
     await tester.pumpAndSettle();
@@ -106,7 +106,7 @@ void main() {
   testWidgets('settings: OpenAI-compatible base URL rules', (tester) async {
     final secrets = MemorySecretStore();
     final built = <ProviderSettings>[];
-    await pumpEmerald(
+    await pumpSapphire(
       tester,
       secrets: secrets,
       aiFactory: (s) {
@@ -184,7 +184,7 @@ void main() {
       }, id: 'c2'),
       say('I proposed adding **M1**.'),
     ]);
-    await pumpEmerald(
+    await pumpSapphire(
       tester,
       storage: storage,
       secrets: MemorySecretStore({
@@ -240,7 +240,7 @@ void main() {
       call('create_note', {'title': 'Two', 'content': '2'}, id: 'c2'),
       say('Two notes proposed.'),
     ]);
-    await pumpEmerald(
+    await pumpSapphire(
       tester,
       storage: storage,
       secrets: MemorySecretStore({
@@ -284,7 +284,7 @@ void main() {
       call('update_note', {'path': 'A.md', 'new_content': 'changed'}),
       say('Proposed.'),
     ]);
-    await pumpEmerald(
+    await pumpSapphire(
       tester,
       storage: storage,
       secrets: MemorySecretStore({

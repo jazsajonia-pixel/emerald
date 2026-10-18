@@ -1,12 +1,12 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:emerald/data/memory_vault_storage.dart';
-import 'package:emerald/data/vault_storage.dart';
-import 'package:emerald/features/notes/note_history.dart';
-import 'package:emerald/features/sync/github_client.dart';
-import 'package:emerald/features/sync/sync_engine.dart';
-import 'package:emerald/features/sync/sync_state_store.dart';
+import 'package:sapphire/data/memory_vault_storage.dart';
+import 'package:sapphire/data/vault_storage.dart';
+import 'package:sapphire/features/notes/note_history.dart';
+import 'package:sapphire/features/sync/github_client.dart';
+import 'package:sapphire/features/sync/sync_engine.dart';
+import 'package:sapphire/features/sync/sync_state_store.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'fake_github.dart';
@@ -47,14 +47,32 @@ void main() {
       expect(k(null, null, 'a'), SyncActionKind.forget);
     });
 
-    test('never plans a deletion', () {
-      // There is no delete action kind at all.
+    test('plans deletions only when mirroring is on; edits beat deletes', () {
+      final base = {'Gone remote.md': 'x', 'Gone local.md': 'y', 'E.md': 'e'};
+      final local = {'Gone remote.md': 'x', 'E.md': 'e2'};
+      final remote = {'Gone local.md': 'y'};
+      final off = planSync(local: local, remote: remote, base: base);
       expect(
-        SyncActionKind.values
-            .map((e) => e.name)
-            .any((n) => n.contains('delete') && !n.contains('Kept')),
+        off.any(
+          (a) =>
+              a.kind == SyncActionKind.deleteLocal ||
+              a.kind == SyncActionKind.deleteRemote,
+        ),
         isFalse,
       );
+      final on = {
+        for (final a in planSync(
+          local: local,
+          remote: remote,
+          base: base,
+          mirrorDeletions: true,
+        ))
+          a.path: a.kind,
+      };
+      expect(on['Gone remote.md'], SyncActionKind.deleteLocal);
+      expect(on['Gone local.md'], SyncActionKind.deleteRemote);
+      // E.md was edited here but deleted on GitHub: the edit is uploaded.
+      expect(on['E.md'], SyncActionKind.upload);
     });
   });
 
@@ -153,7 +171,7 @@ void main() {
     expect(gh.text('A.md'), 'a2 from phone');
     expect(local('B.md'), 'b2 from github');
     expect(history.recorded, ['B.md=b1']);
-    expect(gh.commits.last, 'Update A.md (Emerald sync)');
+    expect(gh.commits.last, 'Update A.md (Sapphire sync)');
   });
 
   test('deletions are never propagated', () async {
@@ -176,6 +194,63 @@ void main() {
     storage.setFile('Gone remote.md', 'x2');
     await engine().run(base);
     expect(gh.text('Gone remote.md'), 'x2');
+  });
+
+  test('mirrored deletions keep both sides identical', () async {
+    storage = MemoryVaultStorage(
+      files: {'Gone remote.md': 'x', 'Gone local.md': 'y', 'Keep.md': 'k'},
+      remembered: vault,
+    );
+    gh = FakeGitHub(
+      files: {'Gone remote.md': 'x', 'Gone local.md': 'y', 'Keep.md': 'k'},
+    );
+    SyncEngine mirror() => SyncEngine(
+      vault: vault,
+      storage: storage,
+      history: history,
+      client: gh.client(),
+      branch: 'main',
+      mirrorDeletions: true,
+      clock: () => now,
+    );
+    await mirror().run(base);
+    gh.files.remove('Gone remote.md');
+    storage.deleteExternally('Gone local.md');
+    final r = await mirror().run(base);
+    expect(r.deletedLocal, 1);
+    expect(r.deletedRemote, 1);
+    expect(local('Gone remote.md'), isNull);
+    expect(gh.text('Gone local.md'), isNull);
+    expect(history.recorded, contains('Gone remote.md=x')); // recoverable
+    expect(gh.commits.last, 'Delete Gone local.md (Sapphire sync)');
+    expect(local('Keep.md'), 'k');
+    expect(gh.text('Keep.md'), 'k');
+    // Nothing left to do afterwards.
+    final r2 = await mirror().run(base);
+    expect(r2.deletedLocal + r2.deletedRemote + r2.uploaded + r2.downloaded, 0);
+  });
+
+  test('mass deletions are blocked for safety', () async {
+    final files = {for (var i = 0; i < 10; i++) 'N$i.md': 'n$i'};
+    storage = MemoryVaultStorage(files: files, remembered: vault);
+    gh = FakeGitHub(files: files);
+    SyncEngine mirror() => SyncEngine(
+      vault: vault,
+      storage: storage,
+      history: history,
+      client: gh.client(),
+      branch: 'main',
+      mirrorDeletions: true,
+      clock: () => now,
+    );
+    await mirror().run(base);
+    for (var i = 0; i < 8; i++) {
+      storage.deleteExternally('N$i.md');
+    }
+    final r = await mirror().run(base);
+    expect(r.deletedRemote, 0);
+    expect(gh.text('N0.md'), 'n0');
+    expect(r.notices.join(), contains('kept them on GitHub for safety'));
   });
 
   test('remote change during upload is not overwritten', () async {

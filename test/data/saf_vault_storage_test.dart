@@ -1,5 +1,5 @@
-import 'package:emerald/data/saf_vault_storage.dart';
-import 'package:emerald/data/vault_storage.dart';
+import 'package:sapphire/data/saf_vault_storage.dart';
+import 'package:sapphire/data/vault_storage.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 

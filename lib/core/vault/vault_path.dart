@@ -1,13 +1,13 @@
 /// Validation and manipulation of vault-relative paths.
 ///
-/// All note paths inside Emerald are relative to the selected vault root and
-/// use `/` as separator, e.g. `Projects/Emerald.md`. The empty string is the
+/// All note paths inside Sapphire are relative to the selected vault root and
+/// use `/` as separator, e.g. `Projects/Sapphire.md`. The empty string is the
 /// vault root. Anything that could escape the vault (absolute paths, `..`,
 /// backslashes, NUL/control characters) is rejected rather than "fixed".
 abstract final class VaultPath {
   static const String root = '';
 
-  /// Folder/file names that Emerald never lists or writes (Obsidian config,
+  /// Folder/file names that Sapphire never lists or writes (Obsidian config,
   /// trash, VCS data, and any other dot-entry).
   static bool isIgnoredName(String name) => name.startsWith('.');
 

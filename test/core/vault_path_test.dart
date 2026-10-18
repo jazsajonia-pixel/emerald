@@ -1,4 +1,4 @@
-import 'package:emerald/core/vault/vault_path.dart';
+import 'package:sapphire/core/vault/vault_path.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -6,7 +6,10 @@ void main() {
     test('accepts ordinary relative paths', () {
       expect(VaultPath.normalize(''), '');
       expect(VaultPath.normalize('Note.md'), 'Note.md');
-      expect(VaultPath.normalize('Projects/Emerald.md'), 'Projects/Emerald.md');
+      expect(
+        VaultPath.normalize('Projects/Sapphire.md'),
+        'Projects/Sapphire.md',
+      );
       expect(VaultPath.normalize('Projects/'), 'Projects');
     });
 

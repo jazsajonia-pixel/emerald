@@ -10,6 +10,7 @@ import '../notes/note_navigation.dart';
 import '../search/index_controller.dart';
 import '../search/vault_index.dart';
 import '../vault/vault_controller.dart';
+import '../../app/theme.dart';
 import 'graph_layout.dart';
 import 'graph_model.dart';
 import 'graph_view.dart';
@@ -548,7 +549,7 @@ class _Legend extends StatelessWidget {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    dot(const Color(0xFFFFC857), ring: scheme.outline),
+                    dot(SapphireTheme.unresolvedNode),
                     const SizedBox(width: 4),
                     Text('Unlinked note', style: small),
                   ],
@@ -569,8 +570,12 @@ class _Legend extends StatelessWidget {
               ],
             ),
             Text(
-              'Tap a note for actions · long-press focuses its local graph'
-              '${pinned == 0 ? '' : ' · $pinned pinned'}',
+              (threeDimensional
+                      ? 'Tap a note for actions · hold & drag to pull it · '
+                            'drag space to orbit · pinch to zoom'
+                      : 'Tap a note for actions · hold & drag to pull it · '
+                            'drag to pan · pinch to zoom') +
+                  (pinned == 0 ? '' : ' · $pinned pinned'),
               style: small?.copyWith(color: scheme.onSurfaceVariant),
             ),
           ],

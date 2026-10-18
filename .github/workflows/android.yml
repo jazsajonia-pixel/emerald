@@ -60,11 +60,11 @@ jobs:
 
       - name: Prepare optional release keystore
         env:
-          KEYSTORE_BASE64: ${{ secrets.EMERALD_KEYSTORE_BASE64 }}
+          KEYSTORE_BASE64: ${{ secrets.SAPPHIRE_KEYSTORE_BASE64 }}
         run: |
           if [ -n "$KEYSTORE_BASE64" ]; then
-            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/emerald-release.jks"
-            echo "EMERALD_KEYSTORE_PATH=$RUNNER_TEMP/emerald-release.jks" >> "$GITHUB_ENV"
+            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/sapphire-release.jks"
+            echo "SAPPHIRE_KEYSTORE_PATH=$RUNNER_TEMP/sapphire-release.jks" >> "$GITHUB_ENV"
             echo "Release keystore provided via secrets."
           else
             echo "No release keystore secret: the APK will be signed with the runner's debug key."
@@ -72,16 +72,16 @@ jobs:
 
       - name: Build release APK
         env:
-          EMERALD_KEYSTORE_PASSWORD: ${{ secrets.EMERALD_KEYSTORE_PASSWORD }}
-          EMERALD_KEY_ALIAS: ${{ secrets.EMERALD_KEY_ALIAS }}
-          EMERALD_KEY_PASSWORD: ${{ secrets.EMERALD_KEY_PASSWORD }}
+          SAPPHIRE_KEYSTORE_PASSWORD: ${{ secrets.SAPPHIRE_KEYSTORE_PASSWORD }}
+          SAPPHIRE_KEY_ALIAS: ${{ secrets.SAPPHIRE_KEY_ALIAS }}
+          SAPPHIRE_KEY_PASSWORD: ${{ secrets.SAPPHIRE_KEY_PASSWORD }}
         # Commit count as versionCode (same scheme as the Release workflow) so
         # newer builds can upgrade older ones when signed with the same key.
-        run: flutter build apk --release --build-number=$(git rev-list --count HEAD)
+        run: flutter build apk --release --build-number=$(git rev-list --count HEAD) --dart-define=SAPPHIRE_GITHUB_CLIENT_ID=${{ vars.SAPPHIRE_GITHUB_CLIENT_ID }}
 
       - name: Report signing status
         run: |
-          rm -f "$RUNNER_TEMP/emerald-release.jks"
+          rm -f "$RUNNER_TEMP/sapphire-release.jks"
           APKSIGNER=$(ls -d "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
           "$APKSIGNER" verify build/app/outputs/flutter-apk/app-release.apk
           SIGNER=$("$APKSIGNER" verify --print-certs build/app/outputs/flutter-apk/app-release.apk | grep -m1 'certificate DN' || true)
@@ -103,7 +103,7 @@ jobs:
       - name: Upload APK artifact
         uses: actions/upload-artifact@v7
         with:
-          name: emerald-android-apk
+          name: sapphire-android-apk
           path: |
             build/app/outputs/flutter-apk/app-release.apk
             build/app/outputs/flutter-apk/app-release.apk.sha256
