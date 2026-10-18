@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -31,7 +32,10 @@ class _GraphScreenState extends ConsumerState<GraphScreen> {
   bool _searching = false;
   bool _rotating = true;
   bool _threeDimensional = true;
+  double _cameraYaw = 0;
+  double _cameraTilt = 0.18;
   final _query = TextEditingController();
+  final _cameraController = GraphCameraController();
 
   VaultIndex? _builtFrom;
   String? _builtCenter;
@@ -47,6 +51,140 @@ class _GraphScreenState extends ConsumerState<GraphScreen> {
   void dispose() {
     _query.dispose();
     super.dispose();
+  }
+
+  Future<void> _showCameraControls() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (context, setSheetState) {
+          void updateCamera({double? yaw, double? tilt}) {
+            setSheetState(() {
+              if (yaw != null) _cameraYaw = yaw;
+              if (tilt != null) _cameraTilt = tilt;
+            });
+            setState(() {
+              if (yaw != null) _cameraYaw = yaw;
+              if (tilt != null) _cameraTilt = tilt;
+            });
+          }
+
+          return SafeArea(
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 4, 24, 24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Camera controls',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 16),
+                    const Text('Pan and zoom'),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        IconButton(
+                          tooltip: 'Zoom out',
+                          onPressed: _cameraController.zoomOut,
+                          icon: const Icon(Icons.remove_circle_outline),
+                        ),
+                        IconButton(
+                          tooltip: 'Zoom in',
+                          onPressed: _cameraController.zoomIn,
+                          icon: const Icon(Icons.add_circle_outline),
+                        ),
+                        IconButton(
+                          tooltip: 'Reset zoom',
+                          onPressed: _cameraController.resetZoom,
+                          icon: const Icon(Icons.center_focus_weak),
+                        ),
+                      ],
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const SizedBox(width: 48),
+                        IconButton(
+                          tooltip: 'Pan up',
+                          onPressed: () =>
+                              _cameraController.pan(const Offset(0, -64)),
+                          icon: const Icon(Icons.keyboard_arrow_up),
+                        ),
+                        const SizedBox(width: 48),
+                      ],
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        IconButton(
+                          tooltip: 'Pan left',
+                          onPressed: () =>
+                              _cameraController.pan(const Offset(-64, 0)),
+                          icon: const Icon(Icons.keyboard_arrow_left),
+                        ),
+                        const Icon(Icons.open_with, size: 20),
+                        IconButton(
+                          tooltip: 'Pan right',
+                          onPressed: () =>
+                              _cameraController.pan(const Offset(64, 0)),
+                          icon: const Icon(Icons.keyboard_arrow_right),
+                        ),
+                      ],
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const SizedBox(width: 48),
+                        IconButton(
+                          tooltip: 'Pan down',
+                          onPressed: () =>
+                              _cameraController.pan(const Offset(0, 64)),
+                          icon: const Icon(Icons.keyboard_arrow_down),
+                        ),
+                        const SizedBox(width: 48),
+                      ],
+                    ),
+                    const Divider(),
+                    Text('Orbit · ${(_cameraYaw * 180 / math.pi).round()}°'),
+                    Slider(
+                      key: const Key('camera-yaw-slider'),
+                      value: _cameraYaw,
+                      min: -math.pi,
+                      max: math.pi,
+                      divisions: 72,
+                      label: '${(_cameraYaw * 180 / math.pi).round()}°',
+                      onChanged: (value) => updateCamera(yaw: value),
+                    ),
+                    Text('Tilt · ${(_cameraTilt * 180 / math.pi).round()}°'),
+                    Slider(
+                      key: const Key('camera-tilt-slider'),
+                      value: _cameraTilt,
+                      min: -0.55,
+                      max: 0.55,
+                      divisions: 22,
+                      label: '${(_cameraTilt * 180 / math.pi).round()}°',
+                      onChanged: (value) => updateCamera(tilt: value),
+                    ),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton.icon(
+                        onPressed: () => updateCamera(yaw: 0, tilt: 0.18),
+                        icon: const Icon(Icons.restart_alt),
+                        label: const Text('Reset orbit and tilt'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
   }
 
   void _ensureGraph(VaultIndex index) {
@@ -197,6 +335,11 @@ class _GraphScreenState extends ConsumerState<GraphScreen> {
                   setState(() => _threeDimensional = !_threeDimensional),
             ),
             IconButton(
+              tooltip: 'Camera controls',
+              icon: const Icon(Icons.tune),
+              onPressed: _threeDimensional ? _showCameraControls : null,
+            ),
+            IconButton(
               tooltip: _rotating
                   ? 'Pause graph rotation'
                   : 'Resume graph rotation',
@@ -323,6 +466,9 @@ class _GraphScreenState extends ConsumerState<GraphScreen> {
                   pinnedPaths: _pinnedPaths,
                   rotating: _rotating,
                   threeDimensional: _threeDimensional,
+                  cameraYaw: _cameraYaw,
+                  cameraTilt: _cameraTilt,
+                  cameraController: _cameraController,
                   onNodeTap: (p) => _showNodeActions(p, data),
                   onNodeLongPress: _openLocal,
                 ),

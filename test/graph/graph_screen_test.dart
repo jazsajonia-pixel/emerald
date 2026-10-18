@@ -94,6 +94,56 @@ void main() {
     expect(find.text('3D perspective · auto-rotating'), findsOneWidget);
   });
 
+  testWidgets('camera controls adjust orbit, tilt, zoom, and reset', (
+    tester,
+  ) async {
+    await pumpEmerald(tester, storage: _storage());
+    await _graph(tester);
+    await tester.tap(find.byTooltip('Camera controls'));
+    await tester.pumpAndSettle();
+
+    final initialScale = tester
+        .widget<InteractiveViewer>(find.byType(InteractiveViewer))
+        .transformationController!
+        .value
+        .getMaxScaleOnAxis();
+    await tester.tap(find.byTooltip('Zoom in'));
+    await tester.pumpAndSettle();
+    final zoomedScale = tester
+        .widget<InteractiveViewer>(find.byType(InteractiveViewer))
+        .transformationController!
+        .value
+        .getMaxScaleOnAxis();
+    expect(zoomedScale, greaterThan(initialScale));
+    await tester.tap(find.byTooltip('Reset zoom'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Pan left'));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(find.text('Camera controls'), findsOneWidget);
+    await tester.ensureVisible(find.byKey(const Key('camera-yaw-slider')));
+    await tester.drag(
+      find.byKey(const Key('camera-yaw-slider')),
+      const Offset(60, 0),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<GraphView>(find.byType(GraphView)).cameraYaw,
+      isNot(0),
+    );
+    await tester.ensureVisible(find.byKey(const Key('camera-tilt-slider')));
+    await tester.pumpAndSettle();
+    await tester.drag(
+      find.byKey(const Key('camera-tilt-slider')),
+      const Offset(40, 0),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<GraphView>(find.byType(GraphView)).cameraTilt,
+      isNot(0.18),
+    );
+  });
+
   testWidgets('tapping a node offers actions and opens the selected note', (
     tester,
   ) async {

@@ -6,6 +6,39 @@ import 'package:flutter/semantics.dart' show SemanticsProperties;
 import 'graph_layout.dart';
 import 'graph_model.dart';
 
+/// Actions for custom camera controls hosted outside the graph canvas.
+class GraphCameraController {
+  Object? _owner;
+  void Function(double factor)? _zoomAction;
+  void Function(Offset distance)? _panAction;
+  VoidCallback? _resetAction;
+
+  void _attach(
+    Object owner, {
+    required void Function(double factor) zoom,
+    required void Function(Offset distance) pan,
+    required VoidCallback reset,
+  }) {
+    _owner = owner;
+    _zoomAction = zoom;
+    _panAction = pan;
+    _resetAction = reset;
+  }
+
+  void _detach(Object owner) {
+    if (!identical(owner, _owner)) return;
+    _owner = null;
+    _zoomAction = null;
+    _panAction = null;
+    _resetAction = null;
+  }
+
+  void zoomIn() => _zoomAction?.call(1.25);
+  void zoomOut() => _zoomAction?.call(0.8);
+  void pan(Offset distance) => _panAction?.call(distance);
+  void resetZoom() => _resetAction?.call();
+}
+
 /// Pan/zoom graph canvas. One [CustomPainter] draws all nodes and edges, so
 /// it stays smooth with thousands of nodes; interaction uses Flutter's
 /// [InteractiveViewer].
@@ -18,6 +51,9 @@ class GraphView extends StatefulWidget {
     this.pinnedPaths = const {},
     this.rotating = true,
     this.threeDimensional = true,
+    this.cameraYaw = 0,
+    this.cameraTilt = 0.18,
+    this.cameraController,
     required this.onNodeTap,
     this.onNodeLongPress,
   });
@@ -28,6 +64,9 @@ class GraphView extends StatefulWidget {
   final Set<String> pinnedPaths;
   final bool rotating;
   final bool threeDimensional;
+  final double cameraYaw;
+  final double cameraTilt;
+  final GraphCameraController? cameraController;
   final ValueChanged<String> onNodeTap;
   final ValueChanged<String>? onNodeLongPress;
 
@@ -76,6 +115,9 @@ class _GraphViewState extends State<GraphView>
   @override
   void didUpdateWidget(GraphView old) {
     super.didUpdateWidget(old);
+    if (old.cameraController != widget.cameraController) {
+      old.cameraController?._detach(this);
+    }
     if (old.data != widget.data) _clearLabels();
     _syncMotion();
   }
@@ -89,6 +131,7 @@ class _GraphViewState extends State<GraphView>
 
   @override
   void dispose() {
+    widget.cameraController?._detach(this);
     _clearLabels();
     _motion?.dispose();
     _transform.dispose();
@@ -109,13 +152,48 @@ class _GraphViewState extends State<GraphView>
     _fittedLayout = l;
   }
 
+  void _zoomBy(double factor) {
+    final viewport = _fittedFor;
+    if (viewport == null) return;
+    final focus = Offset(viewport.width / 2, viewport.height / 2);
+    final scene = _transform.toScene(focus);
+    final targetScale = (_transform.value.getMaxScaleOnAxis() * factor)
+        .clamp(0.05, 5.0)
+        .toDouble();
+    _transform.value = Matrix4.identity()
+      ..translateByDouble(focus.dx, focus.dy, 0, 1)
+      ..scaleByDouble(targetScale, targetScale, 1, 1)
+      ..translateByDouble(-scene.dx, -scene.dy, 0, 1);
+  }
+
+  void _panBy(Offset distance) {
+    final scale = _transform.value.getMaxScaleOnAxis().clamp(0.05, 5.0);
+    final next = _transform.value.clone()
+      ..translateByDouble(distance.dx / scale, distance.dy / scale, 0, 1);
+    _transform.value = next;
+  }
+
+  void _attachCameraActions() {
+    widget.cameraController?._attach(
+      this,
+      zoom: _zoomBy,
+      pan: _panBy,
+      reset: () {
+        final viewport = _fittedFor;
+        if (viewport != null) _fit(viewport);
+      },
+    );
+  }
+
   int? _hit(Offset local) {
     final scale = _transform.value.getMaxScaleOnAxis();
     // GestureDetector reports coordinates in the InteractiveViewer child.
     // Hit-test against the currently rendered positions so taps stay aligned
     // while the graph rotates or is shown in flat 2D mode.
     final origin = Offset(widget.layout.width / 2, widget.layout.height / 2);
-    final rotation = (_motion?.value ?? 0) * math.pi * 2;
+    final rotation =
+        (widget.rotating ? (_motion?.value ?? 0) * math.pi * 2 : 0) +
+        widget.cameraYaw;
     final radius = math.max(18, 24 / scale).toDouble();
     int? best;
     var bestDistance = double.infinity;
@@ -128,6 +206,7 @@ class _GraphViewState extends State<GraphView>
               origin: origin,
               depth: depth,
               rotation: rotation,
+              tilt: widget.cameraTilt,
             )
           : point;
       final projectedDistance = (projected - local).distance;
@@ -153,51 +232,61 @@ class _GraphViewState extends State<GraphView>
         } else {
           _fittedLayout = widget.layout;
         }
-        return InteractiveViewer(
-          transformationController: _transform,
-          constrained: false,
-          minScale: 0.05,
-          maxScale: 5,
-          boundaryMargin: EdgeInsets.all(math.max(viewport.longestSide, 400)),
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTapUp: (d) {
-              final i = _hit(d.localPosition);
-              if (i != null) {
-                setState(() => _emphasized = i);
-                widget.onNodeTap(widget.data.nodes[i].path);
-              }
-            },
-            onLongPressStart: widget.onNodeLongPress == null
-                ? null
-                : (d) {
-                    final i = _hit(d.localPosition);
-                    if (i != null) {
-                      setState(() => _emphasized = i);
-                      widget.onNodeLongPress!(widget.data.nodes[i].path);
-                    }
-                  },
-            child: CustomPaint(
-              key: GraphView.canvasKey,
-              size: Size(widget.layout.width, widget.layout.height),
-              painter: _GraphPainter(
-                data: widget.data,
-                layout: widget.layout,
-                query: widget.query.trim().toLowerCase(),
-                pinnedPaths: widget.pinnedPaths,
-                rotating: widget.rotating,
-                threeDimensional: widget.threeDimensional,
-                scheme: Theme.of(context).colorScheme,
-                transform: _transform,
-                labels: _labels,
-                projection: _projection,
-                emphasized: _emphasized,
-                motion: _motion,
-                onNodeTap: widget.onNodeTap,
-                onNodeLongPress: widget.onNodeLongPress,
+        _attachCameraActions();
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            InteractiveViewer(
+              transformationController: _transform,
+              constrained: false,
+              minScale: 0.05,
+              maxScale: 5,
+              boundaryMargin: EdgeInsets.all(
+                math.max(viewport.longestSide, 400),
+              ),
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTapUp: (d) {
+                  final i = _hit(d.localPosition);
+                  if (i != null) {
+                    setState(() => _emphasized = i);
+                    widget.onNodeTap(widget.data.nodes[i].path);
+                  }
+                },
+                onLongPressStart: widget.onNodeLongPress == null
+                    ? null
+                    : (d) {
+                        final i = _hit(d.localPosition);
+                        if (i != null) {
+                          setState(() => _emphasized = i);
+                          widget.onNodeLongPress!(widget.data.nodes[i].path);
+                        }
+                      },
+                child: CustomPaint(
+                  key: GraphView.canvasKey,
+                  size: Size(widget.layout.width, widget.layout.height),
+                  painter: _GraphPainter(
+                    data: widget.data,
+                    layout: widget.layout,
+                    query: widget.query.trim().toLowerCase(),
+                    pinnedPaths: widget.pinnedPaths,
+                    rotating: widget.rotating,
+                    threeDimensional: widget.threeDimensional,
+                    cameraYaw: widget.cameraYaw,
+                    cameraTilt: widget.cameraTilt,
+                    scheme: Theme.of(context).colorScheme,
+                    transform: _transform,
+                    labels: _labels,
+                    projection: _projection,
+                    emphasized: _emphasized,
+                    motion: _motion,
+                    onNodeTap: widget.onNodeTap,
+                    onNodeLongPress: widget.onNodeLongPress,
+                  ),
+                ),
               ),
             ),
-          ),
+          ],
         );
       },
     );
@@ -212,6 +301,8 @@ class _GraphPainter extends CustomPainter {
     required this.pinnedPaths,
     required this.rotating,
     required this.threeDimensional,
+    required this.cameraYaw,
+    required this.cameraTilt,
     required this.scheme,
     required this.transform,
     required this.labels,
@@ -232,6 +323,8 @@ class _GraphPainter extends CustomPainter {
   final Set<String> pinnedPaths;
   final bool rotating;
   final bool threeDimensional;
+  final double cameraYaw;
+  final double cameraTilt;
   final ColorScheme scheme;
   final TransformationController transform;
   final Map<int, TextPainter> labels;
@@ -249,7 +342,8 @@ class _GraphPainter extends CustomPainter {
   double _depth(int i) => projection.depthFor(i, data.nodes[i].degree);
 
   double _rotation() =>
-      rotating && threeDimensional ? (motion?.value ?? 0) * math.pi * 2 : 0;
+      (rotating && threeDimensional ? (motion?.value ?? 0) * math.pi * 2 : 0) +
+      cameraYaw;
 
   Offset _point(int i) {
     final point = Offset(layout.x(i), layout.y(i));
@@ -259,6 +353,7 @@ class _GraphPainter extends CustomPainter {
       origin: _origin(),
       depth: _depth(i),
       rotation: _rotation(),
+      tilt: cameraTilt,
     );
   }
 
@@ -460,6 +555,10 @@ class _GraphPainter extends CustomPainter {
       old.query != query ||
       old.scheme != scheme ||
       old.pinnedPaths != pinnedPaths ||
+      old.rotating != rotating ||
+      old.threeDimensional != threeDimensional ||
+      old.cameraYaw != cameraYaw ||
+      old.cameraTilt != cameraTilt ||
       old.emphasized != emphasized ||
       old.motion != motion;
 }
