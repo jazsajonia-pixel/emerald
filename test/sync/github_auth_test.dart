@@ -104,4 +104,18 @@ void main() {
     expect(GitHubAuth.validClientId('x'), isFalse);
     expect(GitHubAuth.validClientId('has space in it'), isFalse);
   });
+
+  test('dropped connections while polling are retried', () async {
+    var n = 0;
+    final auth = GitHubAuth(
+      clientId: 'Iv23liABCDEF123456',
+      clock: () => now,
+      sleep: (_) async {},
+      client: MockClient((r) async {
+        if (n++ < 4) throw http.ClientException('connection abort');
+        return _json({'access_token': 'ghu_ok'});
+      }),
+    );
+    expect((await auth.waitForToken(code))!.accessToken, 'ghu_ok');
+  });
 }

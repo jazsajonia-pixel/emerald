@@ -135,7 +135,19 @@ class _SyncScreenState extends ConsumerState<SyncScreen> {
         error: !ok,
       );
     } on SyncException catch (e) {
-      if (mounted) _say(e.userMessage, error: true);
+      if (mounted) {
+        final usingToken =
+            _token.text.trim().isNotEmpty ||
+            ref.read(syncControllerProvider).settings.authMode ==
+                SyncAuthMode.token;
+        _say(
+          syncErrorMessage(
+            e,
+            usingToken ? SyncAuthMode.token : SyncAuthMode.github,
+          ),
+          error: true,
+        );
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -396,7 +408,8 @@ class _SyncScreenState extends ConsumerState<SyncScreen> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      'Waiting for you to approve on GitHub…',
+                      'Waiting for you to approve on GitHub… After approving, '
+                      'just come back to Sapphire.',
                       style: theme.textTheme.bodySmall,
                     ),
                   ),
