@@ -255,22 +255,39 @@ class GitHubAuth {
 
   /// Step 2: polls until the user approved the code. [isCancelled] stops
   /// polling quietly (returns null).
+  ///
+  /// Network errors while polling are expected: Android often drops the
+  /// app's connections while the user is in the browser approving the code.
+  /// They are retried until the code expires. [sleep] overrides the wait
+  /// between polls (the controller uses it to poll immediately when the user
+  /// returns to the app).
   Future<GitHubTokens?> waitForToken(
     DeviceCode code, {
     bool Function()? isCancelled,
+    Future<void> Function(Duration)? sleep,
   }) async {
     var interval = code.interval;
+    final wait = sleep ?? _sleep;
     while (true) {
-      await _sleep(interval);
+      await wait(interval);
       if (isCancelled?.call() ?? false) return null;
       if (_now().isAfter(code.expiresAt)) {
         throw AuthException(AuthErrorCode.expired);
       }
-      final j = await _post('login/oauth/access_token', {
-        'client_id': clientId.trim(),
-        'device_code': code.deviceCode,
-        'grant_type': 'urn:ietf:params:oauth:grant-type:device_code',
-      });
+      final Map<String, Object?> j;
+      try {
+        j = await _post('login/oauth/access_token', {
+          'client_id': clientId.trim(),
+          'device_code': code.deviceCode,
+          'grant_type': 'urn:ietf:params:oauth:grant-type:device_code',
+        });
+      } on AuthException catch (e) {
+        if (e.code == AuthErrorCode.network ||
+            e.code == AuthErrorCode.invalidResponse) {
+          continue; // transient: try again at the next interval
+        }
+        rethrow;
+      }
       if (isCancelled?.call() ?? false) return null;
       final err = j['error'];
       if (err == 'authorization_pending') continue;

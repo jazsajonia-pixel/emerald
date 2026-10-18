@@ -22,6 +22,21 @@ const bundledGitHubClientId = String.fromEnvironment(
 
 enum SyncAuthMode { none, github, token }
 
+/// Rough shape check so a Client ID, device code or partial copy is not
+/// saved as a token.
+bool looksLikeGitHubToken(String t) =>
+    RegExp(r'^(github_pat_|ghp_|gho_|ghu_|ghs_)[A-Za-z0-9_]{8,}$').hasMatch(t);
+
+/// Plain-language message for [e], specific to how the user connected.
+String syncErrorMessage(SyncException e, SyncAuthMode mode) {
+  if (e.code == SyncErrorCode.unauthorized && mode == SyncAuthMode.token) {
+    return 'GitHub rejected the token. Make sure you copied the whole token, '
+        'that it has not expired, and that it was not revoked. Or use '
+        '"Sign in with GitHub" instead.';
+  }
+  return e.userMessage;
+}
+
 class SyncSettings {
   const SyncSettings({
     this.owner = '',
@@ -210,6 +225,26 @@ class SyncController extends Notifier<SyncUiState> {
   Timer? _debounce;
   bool _foreground = true;
   int _signInRun = 0;
+
+  /// Completes to cut the wait between sign-in polls short (app resumed).
+  Completer<void>? _pollWake;
+  Timer? _pollTimer;
+
+  Future<void> _pollSleep(Duration d) {
+    final wake = _pollWake = Completer<void>();
+    _pollTimer?.cancel();
+    _pollTimer = Timer(d, _wakePoll);
+    return wake.future;
+  }
+
+  /// Ends the current wait between sign-in polls now.
+  void _wakePoll() {
+    _pollTimer?.cancel();
+    _pollTimer = null;
+    final w = _pollWake;
+    if (w != null && !w.isCompleted) w.complete();
+  }
+
   DateTime? _lastAuto;
 
   @override
@@ -218,6 +253,7 @@ class SyncController extends Notifier<SyncUiState> {
       _periodic?.cancel();
       _debounce?.cancel();
       _signInRun++;
+      _wakePoll();
     });
     ref.listen(localEditsProvider, (_, _) => localChanged());
     ref.listen(vaultControllerProvider, (prev, next) {
@@ -320,12 +356,14 @@ class SyncController extends Notifier<SyncUiState> {
       final tokens = await auth.waitForToken(
         code,
         isCancelled: () => run != _signInRun || !ref.mounted,
+        sleep: _pollSleep,
       );
       if (tokens == null || run != _signInRun || !ref.mounted) return null;
-      final login = await auth.login(tokens.accessToken);
+      // Save the sign-in first: the app may still be in the background with
+      // no network, and the username can be fetched later.
       await _store.write(_kOAuth, jsonEncode(tokens.toJson()));
-      await _store.write(_kLogin, login);
       await _store.delete(_kToken);
+      await _fetchLogin(auth, tokens.accessToken);
       if (!ref.mounted) return null;
       state = state.copyWith(
         signingIn: false,
@@ -341,6 +379,21 @@ class SyncController extends Notifier<SyncUiState> {
     }
   }
 
+  Future<void> _fetchLogin(GitHubAuth auth, String token) async {
+    for (var attempt = 0; attempt < 3; attempt++) {
+      try {
+        await _store.write(_kLogin, await auth.login(token));
+        return;
+      } on SyncException catch (e) {
+        if (e.code != SyncErrorCode.network &&
+            e.code != SyncErrorCode.timeout) {
+          return;
+        }
+        await Future<void>.delayed(Duration(seconds: 2 * (attempt + 1)));
+      }
+    }
+  }
+
   String? _signInFailed(int run, String message) {
     if (run != _signInRun || !ref.mounted) return null;
     state = state.copyWith(
@@ -353,6 +406,7 @@ class SyncController extends Notifier<SyncUiState> {
 
   void cancelSignIn() {
     _signInRun++;
+    _wakePoll();
     state = state.copyWith(signingIn: false, clearPending: true);
   }
 
@@ -443,6 +497,13 @@ class SyncController extends Notifier<SyncUiState> {
     final hasToken =
         (token?.trim().isNotEmpty ?? false) || state.settings.hasToken;
     if (!hasToken) return 'Enter a token first.';
+    final t = token?.trim() ?? '';
+    if (t.isNotEmpty && !looksLikeGitHubToken(t)) {
+      return 'That does not look like a GitHub token. Fine-grained tokens '
+          'start with "github_pat_" (classic ones with "ghp_"). Copy the whole '
+          'token from GitHub → Settings → Developer settings → Personal access '
+          'tokens.';
+    }
     final old = state.settings;
     await _store.write(_kOwner, owner);
     await _store.write(_kRepo, repo);
@@ -555,6 +616,26 @@ class SyncController extends Notifier<SyncUiState> {
   /// The app came to the foreground (or started): sync and resume the timer.
   void appResumed() {
     _foreground = true;
+    _wakePoll();
+    final st = state.settings;
+    if (st.authMode == SyncAuthMode.github && !state.signingIn) {
+      if (st.login == null) {
+        Future.microtask(() async {
+          try {
+            await _fetchLogin(
+              ref.read(gitHubAuthFactoryProvider)(st.clientId),
+              await _accessToken(),
+            );
+            await _refreshSettings();
+          } on Object {
+            // Shown on the next sync attempt.
+          }
+        });
+      }
+      if (state.repos == null || state.message != null) {
+        Future.microtask(loadRepos);
+      }
+    }
     _schedule();
     autoSync(minGap: const Duration(seconds: 20));
   }
@@ -659,7 +740,10 @@ class SyncController extends Notifier<SyncUiState> {
       return report;
     } on SyncException catch (e) {
       if (ref.mounted) {
-        state = state.copyWith(running: false, message: e.userMessage);
+        state = state.copyWith(
+          running: false,
+          message: syncErrorMessage(e, s.authMode),
+        );
       }
       return null;
     }

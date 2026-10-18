@@ -30,6 +30,9 @@ class FakeGitHubLogin {
   final requests = <http.Request>[];
   bool installed = true;
 
+  /// Number of token polls that fail with a dropped connection first.
+  int failPolls = 0;
+
   /// When true, polling never completes (the user has not approved yet).
   bool hang = false;
 
@@ -58,6 +61,10 @@ class FakeGitHubLogin {
           'refresh_token': 'ghr_2',
           'expires_in': 28800,
         });
+      }
+      if (failPolls > 0) {
+        failPolls--;
+        throw http.ClientException('Software caused connection abort');
       }
       polls++;
       if (polls < 2) return json({'error': 'authorization_pending'});
@@ -247,10 +254,7 @@ void main() {
     await _openSync(tester);
     await fillAndSave(tester);
     await _tap(tester, find.text('Test connection'));
-    expect(
-      find.text(SyncException(SyncErrorCode.unauthorized).userMessage),
-      findsOneWidget,
-    );
+    expect(find.textContaining('GitHub rejected the token'), findsOneWidget);
   });
 
   testWidgets('sign in with GitHub, pick the notes repo and it syncs', (
@@ -345,5 +349,40 @@ void main() {
     await tester.pumpAndSettle();
     await _seek(tester, find.textContaining('No repositories yet'));
     expect(find.textContaining('No repositories yet'), findsOneWidget);
+  });
+
+  testWidgets('a Client ID or code pasted as token is refused', (tester) async {
+    final secrets = await setUpApp(tester);
+    await _openSync(tester);
+    await _tap(tester, find.text('Use a personal access token instead'));
+    await tester.enterText(find.byKey(const Key('sync-owner')), 'me');
+    await tester.enterText(find.byKey(const Key('sync-repo')), 'notes');
+    await tester.enterText(
+      find.byKey(const Key('sync-token')),
+      'Iv23liABCDEF123456',
+    );
+    await _tap(tester, find.byKey(const Key('sync-save')));
+    expect(
+      find.textContaining('does not look like a GitHub token'),
+      findsOneWidget,
+    );
+    expect(secrets.values['sync.github.token'], isNull);
+  });
+
+  testWidgets('sign-in survives the network dropping while in the browser', (
+    tester,
+  ) async {
+    final secrets = await setUpApp(tester);
+    login.failPolls = 3; // e.g. "connection abort" while backgrounded
+    await _openSync(tester);
+    await tester.enterText(
+      find.byKey(const Key('sync-client-id')),
+      'Iv23liABCDEF123456',
+    );
+    await _tap(tester, find.byKey(const Key('sync-signin')));
+    await tester.pumpAndSettle();
+    expect(secrets.values['sync.github.oauth'], contains('ghu_ACCESS'));
+    await _seek(tester, find.text('Signed in as @me'));
+    expect(find.text('Signed in as @me'), findsOneWidget);
   });
 }
