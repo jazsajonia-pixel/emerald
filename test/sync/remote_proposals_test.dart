@@ -7,6 +7,7 @@ import 'package:emerald/data/vault_storage.dart';
 import 'package:emerald/features/ai/proposals.dart';
 import 'package:emerald/features/notes/note_repository.dart';
 import 'package:emerald/features/sync/git_hash.dart';
+import 'package:emerald/features/sync/github_client.dart';
 import 'package:emerald/features/sync/remote_proposals.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -297,9 +298,16 @@ void main() {
         ),
       );
       final item = (await inbox.load()).single;
-      // Simulate the proposal file being changed on GitHub before removal.
-      final original = gh.text('.emerald/proposals/1.json')!;
-      gh.set('.emerald/proposals/1.json', '$original ');
+      // The remote SHA is checked before the local write, so this race hook
+      // changes it only after the note has been safely saved.
+      var changed = false;
+      gh.beforeDelete = (path) {
+        if (!changed && path == '.emerald/proposals/1.json') {
+          changed = true;
+          final original = gh.text(path)!;
+          gh.set(path, '$original ');
+        }
+      };
       await expectLater(inbox.approve(item), throwsA(anything));
       expect(await local('Plan.md'), 'v2\n', reason: 'note stays saved');
       final again = (await inbox.load()).single;
@@ -308,6 +316,80 @@ void main() {
       expect(gh.files.containsKey('.emerald/proposals/1.json'), isFalse);
     },
   );
+
+  test('changed remote proposal is rejected before writing locally', () async {
+    propose(
+      '1',
+      proposalJson(
+        id: '1',
+        kind: 'update',
+        path: 'Plan.md',
+        content: 'v2\n',
+        baseSha: sha('v1\n'),
+      ),
+    );
+    final item = (await inbox.load()).single;
+    gh.set(
+      '.emerald/proposals/1.json',
+      proposalJson(
+        id: '1',
+        kind: 'update',
+        path: 'Plan.md',
+        content: 'changed remotely\n',
+        baseSha: sha('v1\n'),
+      ),
+    );
+    await expectLater(
+      inbox.approve(item),
+      throwsA(
+        isA<SyncException>().having(
+          (e) => e.code,
+          'code',
+          SyncErrorCode.remoteChanged,
+        ),
+      ),
+    );
+    expect(await local('Plan.md'), 'v1\n');
+  });
+
+  test('batch approves ready items sequentially and reports partial failure', () async {
+    propose(
+      '1',
+      proposalJson(
+        id: '1',
+        kind: 'update',
+        path: 'Plan.md',
+        content: 'v2\n',
+        baseSha: sha('v1\n'),
+      ),
+    );
+    propose(
+      '2',
+      proposalJson(
+        id: '2',
+        kind: 'update',
+        path: 'Garden.md',
+        content: 'garden v2\n',
+        baseSha: sha('# Garden\n'),
+      ),
+    );
+    final items = await inbox.load();
+    gh.beforeDelete = (path) {
+      if (path == '.emerald/proposals/2.json') {
+        gh.set(path, '${gh.text(path)!} ');
+      }
+    };
+
+    final result = await inbox.approveAllReady(items);
+
+    expect(result.attempted, 2);
+    expect(result.approved, ['Plan.md']);
+    expect(result.written, ['Plan.md', 'Garden.md']);
+    expect(result.failures.single.path, 'Garden.md');
+    expect(await local('Plan.md'), 'v2\n');
+    expect(await local('Garden.md'), 'garden v2\n');
+    expect(history.recorded, ['Plan.md=v1\n', 'Garden.md=# Garden\n']);
+  });
 
   test('a GitHub note never changes from the inbox (no note writes)', () async {
     propose(

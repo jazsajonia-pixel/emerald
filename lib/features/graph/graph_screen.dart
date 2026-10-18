@@ -39,6 +39,7 @@ class _GraphScreenState extends ConsumerState<GraphScreen> {
   GraphLayout? _layout;
   int _layoutGeneration = 0;
   final Map<String, Offset> _positions = {};
+  Set<String> _pinnedPaths = {};
 
   @override
   void dispose() {
@@ -92,6 +93,72 @@ class _GraphScreenState extends ConsumerState<GraphScreen> {
     _center = path;
     _layout = null;
   });
+
+  Future<void> _showNodeActions(String path, GraphData data) async {
+    GraphNode? node;
+    for (final candidate in data.nodes) {
+      if (candidate.path == path) {
+        node = candidate;
+        break;
+      }
+    }
+    final selected = node;
+    if (selected == null) return;
+    final isPinned = _pinnedPaths.contains(path);
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.hub_outlined),
+                title: Text(selected.title),
+                subtitle: Text(
+                  '${selected.path}\n${selected.degree} linked notes',
+                ),
+                isThreeLine: true,
+              ),
+              ListTile(
+                key: const Key('graph-node-open'),
+                leading: const Icon(Icons.description_outlined),
+                title: const Text('Open note'),
+                onTap: () => Navigator.pop(sheetContext, 'open'),
+              ),
+              ListTile(
+                key: const Key('graph-node-focus'),
+                leading: const Icon(Icons.center_focus_strong),
+                title: const Text('Focus local graph'),
+                onTap: () => Navigator.pop(sheetContext, 'focus'),
+              ),
+              ListTile(
+                key: const Key('graph-node-pin'),
+                leading: Icon(
+                  isPinned ? Icons.push_pin : Icons.push_pin_outlined,
+                ),
+                title: Text(isPinned ? 'Unpin node' : 'Pin node'),
+                onTap: () => Navigator.pop(sheetContext, 'pin'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (!mounted) return;
+    if (action == 'open') {
+      await openNote(context, path);
+    } else if (action == 'focus') {
+      _openLocal(path);
+    } else if (action == 'pin') {
+      setState(() {
+        _pinnedPaths = {..._pinnedPaths};
+        if (!_pinnedPaths.add(path)) _pinnedPaths.remove(path);
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -232,7 +299,8 @@ class _GraphScreenState extends ConsumerState<GraphScreen> {
                   data: data,
                   layout: layout,
                   query: _query.text,
-                  onNodeTap: (p) => openNote(context, p),
+                  pinnedPaths: _pinnedPaths,
+                  onNodeTap: (p) => _showNodeActions(p, data),
                   onNodeLongPress: _openLocal,
                 ),
         ),
@@ -241,6 +309,7 @@ class _GraphScreenState extends ConsumerState<GraphScreen> {
           edges: data.edges.length,
           matches: matches,
           local: _center != null,
+          pinned: _pinnedPaths.length,
         ),
       ],
     );
@@ -253,12 +322,14 @@ class _Legend extends StatelessWidget {
     required this.edges,
     required this.matches,
     required this.local,
+    required this.pinned,
   });
 
   final int nodes;
   final int edges;
   final int? matches;
   final bool local;
+  final int pinned;
 
   @override
   Widget build(BuildContext context) {
@@ -324,7 +395,8 @@ class _Legend extends StatelessWidget {
               ],
             ),
             Text(
-              'Tap a note to open it · long-press for its local graph',
+              'Tap a note for actions · long-press focuses its local graph'
+              '${pinned == 0 ? '' : ' · $pinned pinned'}',
               style: small?.copyWith(color: scheme.onSurfaceVariant),
             ),
           ],

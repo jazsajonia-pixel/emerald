@@ -51,12 +51,26 @@ void main() {
     expect(find.textContaining('AI-suggested links: off'), findsOneWidget);
   });
 
-  testWidgets('tapping a node opens that note', (tester) async {
+  testWidgets('tapping a node offers actions and opens the selected note', (tester) async {
     await pumpEmerald(tester, storage: _storage());
     await _graph(tester);
     await tester.tapAt(_nodePosition(tester, 'Gamma'));
     await tester.pumpAndSettle();
+    expect(find.text('Focus local graph'), findsOneWidget);
+    expect(find.text('Pin node'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('graph-node-open')));
+    await tester.pumpAndSettle();
     expect(find.textContaining('Gamma text.'), findsOneWidget);
+  });
+
+  testWidgets('pin action marks a node in the graph legend', (tester) async {
+    await pumpEmerald(tester, storage: _storage());
+    await _graph(tester);
+    await tester.tapAt(_nodePosition(tester, 'Beta'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('graph-node-pin')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('1 pinned'), findsOneWidget);
   });
 
   testWidgets('long-press opens the local graph; back returns to global', (
@@ -106,6 +120,8 @@ void main() {
     await _graph(tester);
     expect(find.text('4 notes · 2 links'), findsOneWidget);
     await tester.tapAt(_nodePosition(tester, 'Lonely'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('graph-node-open')));
     await tester.pumpAndSettle();
     await tester.enterText(
       find.byKey(const Key('note-editor')),

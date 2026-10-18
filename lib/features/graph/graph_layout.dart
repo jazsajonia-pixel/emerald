@@ -30,6 +30,59 @@ class GraphLayout {
   }
 }
 
+/// A small perspective projection for the graph's 2.5D presentation.
+///
+/// The force layout remains a deterministic 2D simulation. This projection
+/// adds a shallow, deterministic depth plane for painting and hit testing;
+/// it is deliberately not a full 3D scene or camera.
+class GraphProjection {
+  const GraphProjection({this.focalLength = 2200, this.nearPlane = 0.25});
+
+  /// Distance at which the perspective scale would become unstable.
+  final double nearPlane;
+
+  /// Larger values keep the graph readable while still giving depth cues.
+  final double focalLength;
+
+  /// Stable pseudo-depth in logical pixels for a node.
+  ///
+  /// It depends only on the node index and degree, so layout refreshes and
+  /// rebuilds do not make the graph appear to jump between depth layers.
+  double depthFor(int index, int degree) {
+    final seed = (index * 37 + degree * 17) & 0x7fffffff;
+    return 18 + (seed % 120).toDouble();
+  }
+
+  double scaleForDepth(double depth) {
+    final safeNear = nearPlane.isFinite && nearPlane > 0 ? nearPlane : 0.25;
+    final safeDepth = depth.isFinite ? math.max(safeNear, depth) : safeNear;
+    final safeFocal = focalLength.isFinite && focalLength > safeNear
+        ? focalLength
+        : 1;
+    final scale = safeFocal / (safeFocal + safeDepth);
+    return scale.isFinite && scale > 0 ? scale : 1;
+  }
+
+  /// Projects a layout point around [origin] onto the graph's 2D canvas.
+  Offset project(Offset point, {required Offset origin, double depth = 0}) {
+    final s = scaleForDepth(depth);
+    final projected = origin + (point - origin) * s;
+    return _finite(projected, fallback: origin);
+  }
+
+  /// Reverses [project] for hit testing at a known node depth.
+  Offset unproject(Offset point, {required Offset origin, double depth = 0}) {
+    final s = scaleForDepth(depth);
+    final unprojected = origin + (point - origin) / s;
+    return _finite(unprojected, fallback: origin);
+  }
+
+  static Offset _finite(Offset value, {required Offset fallback}) {
+    if (value.dx.isFinite && value.dy.isFinite) return value;
+    return fallback;
+  }
+}
+
 class LayoutInput {
   const LayoutInput(this.nodeCount, this.edges, {this.initial, this.seed = 7});
 

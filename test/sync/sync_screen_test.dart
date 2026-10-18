@@ -186,4 +186,45 @@ void main() {
       isFalse,
     );
   });
+
+  testWidgets('Home shows a proposal banner only after sync is ready', (
+    tester,
+  ) async {
+    await setUpApp(tester);
+    gh.set(
+      '.emerald/proposals/20261018T091500Z-00000002.json',
+      jsonEncode({
+        'format': 'emerald-proposal',
+        'version': 1,
+        'id': '20261018T091500Z-00000002',
+        'createdAt': '2026-10-18T09:15:00.000Z',
+        'kind': 'update',
+        'path': 'Local.md',
+        'baseSha': gitBlobSha(Uint8List.fromList(utf8.encode('from phone'))),
+        'content': 'from phone\nfrom Home',
+        'summary': 'Add a Home line',
+        'client': null,
+      }),
+    );
+
+    // The initial Home open is not configured, so it must not query GitHub.
+    expect(gh.requests, isEmpty);
+    await _openSync(tester);
+    await fillAndSave(tester);
+    await _tap(tester, find.byKey(const Key('sync-enabled')));
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: find.byType(NavigationBar),
+        matching: find.text('Home'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('home-proposals-banner')), findsOneWidget);
+    await _tap(tester, find.byKey(const Key('home-proposals-banner')));
+    expect(find.text('AI app proposals'), findsOneWidget);
+    expect(find.text('Add a Home line'), findsOneWidget);
+  });
 }

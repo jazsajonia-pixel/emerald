@@ -14,6 +14,7 @@ class GraphView extends StatefulWidget {
     required this.data,
     required this.layout,
     this.query = '',
+    this.pinnedPaths = const {},
     required this.onNodeTap,
     this.onNodeLongPress,
   });
@@ -21,6 +22,7 @@ class GraphView extends StatefulWidget {
   final GraphData data;
   final GraphLayout layout;
   final String query;
+  final Set<String> pinnedPaths;
   final ValueChanged<String> onNodeTap;
   final ValueChanged<String>? onNodeLongPress;
 
@@ -33,16 +35,41 @@ class GraphView extends StatefulWidget {
   State<GraphView> createState() => _GraphViewState();
 }
 
-class _GraphViewState extends State<GraphView> {
+class _GraphViewState extends State<GraphView>
+    with SingleTickerProviderStateMixin {
   final _transform = TransformationController();
+  final _projection = const GraphProjection();
+  AnimationController? _motion;
   Size? _fittedFor;
   GraphLayout? _fittedLayout;
   final _labels = <int, TextPainter>{};
+  int? _emphasized;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _syncMotion();
+  }
+
+  void _syncMotion() {
+    final shouldAnimate = !MediaQuery.of(context).disableAnimations &&
+        widget.data.nodes.length <= 600;
+    if (shouldAnimate && _motion == null) {
+      _motion = AnimationController(
+        vsync: this,
+        duration: const Duration(seconds: 18),
+      )..repeat();
+    } else if (!shouldAnimate && _motion != null) {
+      _motion!.dispose();
+      _motion = null;
+    }
+  }
 
   @override
   void didUpdateWidget(GraphView old) {
     super.didUpdateWidget(old);
     if (old.data != widget.data) _clearLabels();
+    _syncMotion();
   }
 
   void _clearLabels() {
@@ -55,6 +82,7 @@ class _GraphViewState extends State<GraphView> {
   @override
   void dispose() {
     _clearLabels();
+    _motion?.dispose();
     _transform.dispose();
     super.dispose();
   }
@@ -75,8 +103,36 @@ class _GraphViewState extends State<GraphView> {
 
   int? _hit(Offset local) {
     final scale = _transform.value.getMaxScaleOnAxis();
-    // At least a 48 dp touch target regardless of zoom.
-    return widget.layout.hitTest(local.dx, local.dy, math.max(18, 24 / scale));
+    // GestureDetector reports coordinates in the InteractiveViewer child.
+    // Invert each node's perspective projection before testing its layout
+    // position. The raw-position pass is a forgiving fallback for a 48 dp
+    // target during a zoom/pan transition.
+    final origin = Offset(widget.layout.width / 2, widget.layout.height / 2);
+    final radius = math.max(18, 24 / scale);
+    int? best;
+    var bestDistance = double.infinity;
+    for (var i = 0; i < widget.data.nodes.length; i++) {
+      final depth = _projection.depthFor(i, widget.data.nodes[i].degree);
+      final projected = _projection.project(
+        Offset(widget.layout.x(i), widget.layout.y(i)),
+        origin: origin,
+        depth: depth,
+      );
+      final inverse = _projection.unproject(
+        local,
+        origin: origin,
+        depth: depth,
+      );
+      final projectedDistance = (projected - local).distance;
+      final layoutDistance =
+          (Offset(widget.layout.x(i), widget.layout.y(i)) - inverse).distance;
+      final distance = math.min(projectedDistance, layoutDistance);
+      if (distance <= radius && distance < bestDistance) {
+        bestDistance = distance;
+        best = i;
+      }
+    }
+    return best ?? widget.layout.hitTest(local.dx, local.dy, radius);
   }
 
   @override
@@ -103,13 +159,17 @@ class _GraphViewState extends State<GraphView> {
             behavior: HitTestBehavior.opaque,
             onTapUp: (d) {
               final i = _hit(d.localPosition);
-              if (i != null) widget.onNodeTap(widget.data.nodes[i].path);
+              if (i != null) {
+                setState(() => _emphasized = i);
+                widget.onNodeTap(widget.data.nodes[i].path);
+              }
             },
             onLongPressStart: widget.onNodeLongPress == null
                 ? null
                 : (d) {
                     final i = _hit(d.localPosition);
                     if (i != null) {
+                      setState(() => _emphasized = i);
                       widget.onNodeLongPress!(widget.data.nodes[i].path);
                     }
                   },
@@ -120,9 +180,15 @@ class _GraphViewState extends State<GraphView> {
                 data: widget.data,
                 layout: widget.layout,
                 query: widget.query.trim().toLowerCase(),
+                pinnedPaths: widget.pinnedPaths,
                 scheme: Theme.of(context).colorScheme,
                 transform: _transform,
                 labels: _labels,
+                projection: _projection,
+                emphasized: _emphasized,
+                motion: _motion,
+                onNodeTap: widget.onNodeTap,
+                onNodeLongPress: widget.onNodeLongPress,
               ),
             ),
           ),
@@ -137,20 +203,46 @@ class _GraphPainter extends CustomPainter {
     required this.data,
     required this.layout,
     required this.query,
+    required this.pinnedPaths,
     required this.scheme,
     required this.transform,
     required this.labels,
-  }) : super(repaint: transform);
+    required this.projection,
+    required this.emphasized,
+    required this.motion,
+    required this.onNodeTap,
+    required this.onNodeLongPress,
+  }) : super(
+         repaint: motion == null
+             ? transform
+             : Listenable.merge([transform, motion!]),
+       );
 
   final GraphData data;
   final GraphLayout layout;
   final String query;
+  final Set<String> pinnedPaths;
   final ColorScheme scheme;
   final TransformationController transform;
   final Map<int, TextPainter> labels;
+  final GraphProjection projection;
+  final int? emphasized;
+  final Animation<double>? motion;
+  final ValueChanged<String> onNodeTap;
+  final ValueChanged<String>? onNodeLongPress;
 
   bool _matches(GraphNode n) =>
       query.isNotEmpty && n.title.toLowerCase().contains(query);
+
+  Offset _origin() => Offset(layout.width / 2, layout.height / 2);
+
+  double _depth(int i) => projection.depthFor(i, data.nodes[i].degree);
+
+  Offset _point(int i) => projection.project(
+    Offset(layout.x(i), layout.y(i)),
+    origin: _origin(),
+    depth: _depth(i),
+  );
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -158,6 +250,7 @@ class _GraphPainter extends CustomPainter {
     final searching = query.isNotEmpty;
     final centerIndex = data.center == null ? null : data.indexOf(data.center!);
     final stroke = 1.2 / scale.clamp(0.4, 2);
+    final pulse = motion?.value ?? 0;
 
     final edgePaint = Paint()
       ..color = scheme.primary.withValues(alpha: searching ? 0.15 : 0.45)
@@ -169,8 +262,8 @@ class _GraphPainter extends CustomPainter {
       ..style = PaintingStyle.stroke;
     final explicitPath = Path();
     for (final e in data.edges) {
-      final a = Offset(layout.x(e.source), layout.y(e.source));
-      final b = Offset(layout.x(e.target), layout.y(e.target));
+      final a = _point(e.source);
+      final b = _point(e.target);
       if (e.kind == EdgeKind.explicit) {
         explicitPath
           ..moveTo(a.dx, a.dy)
@@ -181,8 +274,6 @@ class _GraphPainter extends CustomPainter {
     }
     canvas.drawPath(explicitPath, edgePaint);
 
-    final linked = Paint()..color = scheme.primary;
-    final dim = Paint()..color = scheme.primary.withValues(alpha: 0.25);
     final isolatedFill = Paint()..color = scheme.surfaceContainerHighest;
     final isolatedRing = Paint()
       ..color = scheme.outline
@@ -196,21 +287,79 @@ class _GraphPainter extends CustomPainter {
       ..color = scheme.tertiary
       ..style = PaintingStyle.stroke
       ..strokeWidth = 4;
+    final emphasisRing = Paint()
+      ..color = scheme.onSurface
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.2;
+    final pinnedRing = Paint()
+      ..color = scheme.tertiary
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.4;
+    final pinnedMarker = Paint()..color = scheme.tertiary;
 
     final showAllLabels = data.nodes.length <= 40 || scale >= 0.9;
     for (var i = 0; i < data.nodes.length; i++) {
       final n = data.nodes[i];
-      final c = Offset(layout.x(i), layout.y(i));
-      final r = GraphView.nodeRadius(n);
+      final c = _point(i);
+      final depth = _depth(i);
+      final depthScale = projection.scaleForDepth(depth);
+      final r = GraphView.nodeRadius(n) * depthScale;
       final hit = _matches(n);
+      final isEmphasized = i == emphasized;
+      final isPinned = pinnedPaths.contains(n.path);
+      final shimmer = motion == null
+          ? 0.0
+          : (math.sin(pulse * math.pi * 2 + i * 0.37) + 1) / 2;
+      final depthMix = (depth / 140).clamp(0.0, 1.0);
+      final linkedFill = Color.lerp(scheme.primary, scheme.tertiary, depthMix)!;
+      final nodeFill = searching && !hit
+          ? linkedFill.withValues(alpha: 0.25)
+          : linkedFill.withValues(alpha: 0.82 + shimmer * 0.12);
+      final shadow = Paint()
+        ..color = scheme.shadow.withValues(alpha: 0.14 + depthMix * 0.08)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
+      canvas.drawCircle(
+        c + Offset(1.5 + depthMix * 2, 2.5 + depthMix * 2),
+        r,
+        shadow,
+      );
       if (n.isolated) {
-        canvas.drawCircle(c, r, isolatedFill);
-        canvas.drawCircle(c, r, isolatedRing);
+        final diamond = Path()
+          ..moveTo(c.dx, c.dy - r)
+          ..lineTo(c.dx + r, c.dy)
+          ..lineTo(c.dx, c.dy + r)
+          ..lineTo(c.dx - r, c.dy)
+          ..close();
+        canvas.drawPath(diamond, isolatedFill);
+        canvas.drawPath(diamond, isolatedRing);
       } else {
-        canvas.drawCircle(c, r, searching && !hit ? dim : linked);
+        canvas.drawCircle(c, r, Paint()..color = nodeFill);
       }
       if (hit) canvas.drawCircle(c, r + 4, hiRing);
       if (i == centerIndex) canvas.drawCircle(c, r + 5, centerRing);
+      if (isPinned) {
+        canvas.drawCircle(c, r + 10, pinnedRing);
+        final marker = Path()
+          ..moveTo(c.dx, c.dy - r - 15)
+          ..lineTo(c.dx + 4, c.dy - r - 11)
+          ..lineTo(c.dx, c.dy - r - 7)
+          ..lineTo(c.dx - 4, c.dy - r - 11)
+          ..close();
+        canvas.drawPath(marker, pinnedMarker);
+      }
+      if (isEmphasized) {
+        canvas.drawCircle(c, r + 8 + shimmer * 2, emphasisRing);
+        canvas.drawLine(
+          c - const Offset(12, 0),
+          c + const Offset(12, 0),
+          emphasisRing,
+        );
+        canvas.drawLine(
+          c - const Offset(0, 12),
+          c + const Offset(0, 12),
+          emphasisRing,
+        );
+      }
       if (showAllLabels || hit || i == centerIndex) {
         final tp = labels[i] ??= (TextPainter(
           text: TextSpan(
@@ -241,9 +390,39 @@ class _GraphPainter extends CustomPainter {
   }
 
   @override
+  SemanticsBuilderCallback get semanticsBuilder => (Size size) {
+    return [
+      for (var i = 0; i < data.nodes.length; i++)
+        CustomPainterSemantics(
+          rect: Rect.fromCircle(
+            center: _point(i),
+            radius: math.max(24, GraphView.nodeRadius(data.nodes[i])),
+          ),
+          properties: SemanticsProperties(
+            label: data.nodes[i].title,
+            hint: 'Tap for note actions. Long press to focus its local graph.',
+            onTap: () => onNodeTap(data.nodes[i].path),
+            onLongPress: onNodeLongPress == null
+                ? null
+                : () => onNodeLongPress!(data.nodes[i].path),
+          ),
+        ),
+    ];
+  };
+
+  @override
+  bool shouldRebuildSemantics(_GraphPainter oldDelegate) =>
+      oldDelegate.data != data ||
+      oldDelegate.layout != layout ||
+      oldDelegate.emphasized != emphasized;
+
+  @override
   bool shouldRepaint(_GraphPainter old) =>
       old.data != data ||
       old.layout != layout ||
       old.query != query ||
-      old.scheme != scheme;
+      old.scheme != scheme ||
+      old.pinnedPaths != pinnedPaths ||
+      old.emphasized != emphasized ||
+      old.motion != motion;
 }

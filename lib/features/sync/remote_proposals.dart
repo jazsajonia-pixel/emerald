@@ -122,6 +122,35 @@ class InboxItem {
   final String? reason;
 }
 
+/// The outcome of approving a group of ready proposals. A write can succeed
+/// while removing the proposal fails, so [written] and [approved] are kept
+/// separate for accurate partial-failure reporting.
+class BatchApprovalResult {
+  const BatchApprovalResult({
+    required this.attempted,
+    required this.written,
+    required this.approved,
+    required this.failures,
+    required this.skipped,
+  });
+
+  final int attempted;
+  final List<String> written;
+  final List<String> approved;
+  final List<ProposalApprovalFailure> failures;
+  final int skipped;
+
+  bool get hasWrites => written.isNotEmpty;
+}
+
+class ProposalApprovalFailure {
+  const ProposalApprovalFailure(this.path, this.error, {this.written = false});
+
+  final String path;
+  final Object error;
+  final bool written;
+}
+
 /// Lists AI proposals stored on GitHub and applies the ones the user
 /// approves to the local vault. Notes are written only through
 /// [NoteRepository] (conflict-checked, history kept, creates never
@@ -166,7 +195,18 @@ class RemoteProposalInbox {
         );
         continue;
       }
-      final p = RemoteProposal.parse(await client.getBlob(f.sha));
+      final bytes = await client.getBlob(f.sha);
+      if (gitBlobSha(bytes) != f.sha) {
+        items.add(
+          InboxItem(
+            file: f,
+            state: InboxItemState.invalid,
+            reason: 'The proposal file failed its integrity check.',
+          ),
+        );
+        continue;
+      }
+      final p = RemoteProposal.parse(bytes);
       if (p == null) {
         items.add(
           InboxItem(
@@ -263,18 +303,80 @@ class RemoteProposalInbox {
   /// file on GitHub. If removing fails, the note stays saved and the item
   /// shows up as "already applied" next time, so it can be removed then.
   Future<NoteDocument> approve(InboxItem item) async {
+    final doc = await _applyAfterRemoteCheck(item);
+    await _remove(item, 'Approved in Emerald');
+    return doc;
+  }
+
+  /// Approves only currently-ready items, one at a time. Each item is checked
+  /// against its remote proposal SHA immediately before any local write. A
+  /// failure does not stop later items; stale, invalid and already-applied
+  /// items are never included in the batch.
+  Future<BatchApprovalResult> approveAllReady(
+    Iterable<InboxItem> items,
+  ) async {
+    final all = items.toList();
+    final ready = all
+        .where((item) =>
+            item.state == InboxItemState.ready && item.note != null)
+        .toList();
+    final written = <String>[];
+    final approved = <String>[];
+    final failures = <ProposalApprovalFailure>[];
+    for (final item in ready) {
+      final path = item.proposal?.path ?? item.file.path;
+      try {
+        await _applyAfterRemoteCheck(item);
+        written.add(path);
+        try {
+          await _remove(item, 'Approved in Emerald');
+          approved.add(path);
+        } catch (e) {
+          failures.add(ProposalApprovalFailure(path, e, written: true));
+        }
+      } catch (e) {
+        failures.add(ProposalApprovalFailure(path, e));
+      }
+    }
+    return BatchApprovalResult(
+      attempted: ready.length,
+      written: written,
+      approved: approved,
+      failures: failures,
+      skipped: all.length - ready.length,
+    );
+  }
+
+  Future<NoteDocument> _applyAfterRemoteCheck(InboxItem item) async {
     final note = item.note;
     if (item.state != InboxItemState.ready || note == null) {
       throw StateError('Only ready proposals can be approved');
     }
+    await _assertRemoteProposalUnchanged(item);
     if (note.kind == ProposalKind.create) {
       final parent = VaultPath.parent(note.path);
       if (parent.isNotEmpty) await storage.createDirectory(vault, parent);
     }
     final doc = await ProposalApplier(repository).apply(vault, note);
     note.status = ProposalStatus.applied;
-    await _remove(item, 'Approved in Emerald');
     return doc;
+  }
+
+  /// The proposal SHA captured while loading is an optimistic lock. Checking
+  /// it again prevents a changed remote proposal from being written locally;
+  /// deletion below performs its own SHA check after the local write.
+  Future<void> _assertRemoteProposalUnchanged(InboxItem item) async {
+    final current = await client.listFiles(branch);
+    RemoteFile? found;
+    for (final file in current) {
+      if (file.path == item.file.path) {
+        found = file;
+        break;
+      }
+    }
+    if (found == null || found.sha != item.file.sha) {
+      throw SyncException(SyncErrorCode.remoteChanged);
+    }
   }
 
   /// Rejects or clears a proposal: removes its file on GitHub. Notes are

@@ -5,6 +5,7 @@ import '../features/graph/graph_screen.dart';
 import '../features/home/home_screen.dart';
 import '../features/notes/notes_screen.dart';
 import '../features/settings/settings_screen.dart';
+import 'theme.dart';
 
 enum AppDestination {
   home('Home', Icons.home_outlined, Icons.home),
@@ -43,16 +44,45 @@ class _HomeShellState extends State<HomeShell> {
     AppDestination.settings => const SettingsScreen(),
   };
 
+  Widget _animatedBody(BuildContext context) {
+    final disableAnimations = MediaQuery.disableAnimationsOf(context);
+    return AnimatedSwitcher(
+      duration: disableAnimations
+          ? Duration.zero
+          : const Duration(milliseconds: 220),
+      reverseDuration: disableAnimations
+          ? Duration.zero
+          : const Duration(milliseconds: 160),
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeInCubic,
+      transitionBuilder: (child, animation) {
+        final position = Tween<Offset>(
+          begin: const Offset(0.018, 0),
+          end: Offset.zero,
+        ).chain(CurveTween(curve: Curves.easeOutCubic)).animate(animation);
+        return FadeTransition(
+          opacity: animation,
+          child: SlideTransition(position: position, child: child),
+        );
+      },
+      child: KeyedSubtree(key: ValueKey(_current), child: _body()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final wide = MediaQuery.sizeOf(context).width >= HomeShell.railBreakpoint;
-    final body = KeyedSubtree(key: ValueKey(_current), child: _body());
+    final body = _animatedBody(context);
     if (wide) {
       return Scaffold(
         body: SafeArea(
           child: Row(
             children: [
               NavigationRail(
+                leading: const Padding(
+                  padding: EdgeInsets.only(top: 12, bottom: 18),
+                  child: EmeraldMark(size: 38),
+                ),
                 selectedIndex: _current.index,
                 onDestinationSelected: (i) => _go(AppDestination.values[i]),
                 labelType: NavigationRailLabelType.all,

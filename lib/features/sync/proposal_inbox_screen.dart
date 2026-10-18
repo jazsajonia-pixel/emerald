@@ -79,6 +79,128 @@ class _ProposalInboxScreenState extends ConsumerState<ProposalInboxScreen> {
   Future<void> _dismiss(InboxItem item, String done) =>
       _run(() => _inbox!.dismiss(item), done);
 
+  Future<void> _approveAllReady() async {
+    final items = _items;
+    if (items == null) return;
+    final ready = items
+        .where((item) =>
+            item.state == InboxItemState.ready && item.note != null)
+        .toList();
+    if (ready.isEmpty) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Approve all ready proposals?'),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'This will apply ${ready.length} ready '
+                '${ready.length == 1 ? 'proposal' : 'proposals'} in order. '
+                'Stale, invalid, and already-applied items are left alone. '
+                'This is sequential, not all-or-nothing; successful saves stay '
+                'saved if another item fails. Each remote proposal is checked '
+                'again before its note is written.',
+              ),
+              const SizedBox(height: 12),
+              for (final item in ready)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Text('• ${item.proposal!.path}'),
+                ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Approve all ready'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _busy = true);
+    try {
+      final result = await _inbox!.approveAllReady(items);
+      // Every local write has passed the remote SHA and repository conflict
+      // checks. Rescan once for the whole batch, never between items.
+      if (result.hasWrites) {
+        await ref.read(vaultControllerProvider.notifier).rescan();
+      }
+      await _load();
+      if (!mounted) return;
+      await _showBatchReport(result);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(_message(e))),
+        );
+      }
+      await _load();
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _showBatchReport(BatchApprovalResult result) async {
+    final savedButNotRemoved =
+        result.failures.where((failure) => failure.written).length;
+    final notApplied =
+        result.failures.where((failure) => !failure.written).length;
+    final details = <String>[
+      if (result.approved.isNotEmpty)
+        'Approved and removed: ${result.approved.length}.',
+      if (savedButNotRemoved > 0)
+        'Saved locally, but could not remove: $savedButNotRemoved.',
+      if (notApplied > 0) 'Not applied: $notApplied.',
+      if (result.skipped > 0)
+        'Skipped stale, invalid, or already-applied: ${result.skipped}.',
+      if (result.approved.isEmpty &&
+          result.written.isEmpty &&
+          result.failures.isEmpty)
+        'Nothing was applied.',
+    ];
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Batch approval complete'),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (final line in details) Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Text(line),
+              ),
+              for (final failure in result.failures)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    '${failure.path}: ${_message(failure.error)}',
+                    style: TextStyle(color: Theme.of(ctx).colorScheme.error),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Done'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -120,6 +242,21 @@ class _ProposalInboxScreenState extends ConsumerState<ProposalInboxScreen> {
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 24),
               child: Text('No proposals are waiting.'),
+            ),
+          if (items != null &&
+              items.any((item) =>
+                  item.state == InboxItemState.ready && item.note != null))
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: FilledButton.icon(
+                  key: const Key('approve-all-ready'),
+                  onPressed: _busy ? null : _approveAllReady,
+                  icon: const Icon(Icons.done_all),
+                  label: const Text('Approve all ready'),
+                ),
+              ),
             ),
           if (items != null)
             for (final item in items) _buildItem(context, item),
