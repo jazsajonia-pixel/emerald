@@ -78,10 +78,13 @@ Sign in with GitHub and automatic sync:
     Enable Device Flow), paste the Client ID, install it on the notes repo only.
 30. Sign in with GitHub → code shown → approve on github.com → "Signed in as
     @you" and only the notes repository is listed → tap it → first sync runs.
-31. Edit a note on github.com, return to Sapphire → the change appears within
-    the chosen interval (or immediately on returning to the app).
-32. Edit a note in Sapphire → about 6 s later the commit is on github.com.
-33. Delete a note on github.com → after the next sync it is gone on the phone
+31. Edit a note on github.com, return to Sapphire → the change appears after
+    the foreground sync. There is no recurring interval timer.
+32. Edit a note in Sapphire → about 3 s after detection the commit is on github.com.
+33. Turn off Sync automatically → edit a note → verify no automatic commit;
+    Sync now still works. Turn it back on. Check changed notes receive the mint
+    graph accent and that 3D drag follows the finger through a full orbit.
+34. Delete a note on github.com → after the next sync it is gone on the phone
     and its last content is in note history. Delete one on the phone → it is
     deleted on GitHub.
 

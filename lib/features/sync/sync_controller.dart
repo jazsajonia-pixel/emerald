@@ -49,7 +49,6 @@ class SyncSettings {
     this.login,
     this.clientId = '',
     this.autoSync = true,
-    this.intervalMinutes = 2,
     this.mirrorDeletions = true,
   });
 
@@ -74,9 +73,8 @@ class SyncSettings {
   /// GitHub App client ID used for sign-in.
   final String clientId;
 
-  /// Sync automatically (on open, on return, after edits, periodically).
+  /// Sync automatically on open/return and after detected note changes.
   final bool autoSync;
-  final int intervalMinutes;
 
   /// Deleting a note on one side deletes it on the other side.
   final bool mirrorDeletions;
@@ -104,6 +102,7 @@ class SyncUiState {
     this.current = '',
     this.lastReport,
     this.lastSync,
+    this.changedPaths = const {},
     this.message,
     this.pending,
     this.signingIn = false,
@@ -120,6 +119,7 @@ class SyncUiState {
   final String current;
   final SyncReport? lastReport;
   final DateTime? lastSync;
+  final Set<String> changedPaths;
 
   /// A plain-language problem that stopped the last action (not a report).
   final String? message;
@@ -143,6 +143,7 @@ class SyncUiState {
     String? current,
     SyncReport? lastReport,
     DateTime? lastSync,
+    Set<String>? changedPaths,
     String? message,
     bool clearMessage = false,
     PendingSignIn? pending,
@@ -161,6 +162,7 @@ class SyncUiState {
     current: current ?? this.current,
     lastReport: lastReport ?? this.lastReport,
     lastSync: lastSync ?? this.lastSync,
+    changedPaths: changedPaths ?? this.changedPaths,
     message: clearMessage ? null : (message ?? this.message),
     pending: clearPending ? null : (pending ?? this.pending),
     signingIn: signingIn ?? this.signingIn,
@@ -195,7 +197,7 @@ final gitHubAuthFactoryProvider = Provider<GitHubAuthFactory>(
       (clientId) => GitHubAuth(clientId: clientId),
 );
 
-/// Whether automatic sync timers may run. Tests switch it off so syncs only
+/// Whether automatic sync may run. Tests switch it off so syncs only
 /// happen when a test asks for them.
 final autoSyncRuntimeProvider = Provider<bool>((ref) => true);
 
@@ -214,16 +216,12 @@ class SyncController extends Notifier<SyncUiState> {
   static const _kEnabled = 'sync.github.enabled';
   static const _kPublic = 'sync.github.allowPublic';
   static const _kAuto = 'sync.auto';
-  static const _kInterval = 'sync.auto.minutes';
   static const _kMirror = 'sync.mirrorDeletions';
 
-  static const intervals = [1, 2, 5, 15, 30];
 
   SecretStore get _store => ref.read(secretStoreProvider);
 
-  Timer? _periodic;
   Timer? _debounce;
-  bool _foreground = true;
   int _signInRun = 0;
 
   /// Completes to cut the wait between sign-in polls short (app resumed).
@@ -250,7 +248,6 @@ class SyncController extends Notifier<SyncUiState> {
   @override
   SyncUiState build() {
     ref.onDispose(() {
-      _periodic?.cancel();
       _debounce?.cancel();
       _signInRun++;
       _wakePoll();
@@ -276,7 +273,6 @@ class SyncController extends Notifier<SyncUiState> {
         : (pat != null && pat.isNotEmpty)
         ? SyncAuthMode.token
         : SyncAuthMode.none;
-    final minutes = int.tryParse(await _store.read(_kInterval) ?? '') ?? 2;
     return SyncSettings(
       owner: await _store.read(_kOwner) ?? '',
       repo: await _store.read(_kRepo) ?? '',
@@ -288,7 +284,6 @@ class SyncController extends Notifier<SyncUiState> {
       login: await _store.read(_kLogin),
       clientId: await _store.read(_kClientId) ?? bundledGitHubClientId,
       autoSync: await _store.read(_kAuto) != 'no',
-      intervalMinutes: intervals.contains(minutes) ? minutes : 2,
       mirrorDeletions: await _store.read(_kMirror) != 'no',
     );
   }
@@ -297,7 +292,6 @@ class SyncController extends Notifier<SyncUiState> {
     final s = await _readSettings();
     if (!ref.mounted) return;
     state = state.copyWith(settings: s);
-    _schedule();
   }
 
   Future<void> _load() async {
@@ -305,7 +299,6 @@ class SyncController extends Notifier<SyncUiState> {
     if (!ref.mounted) return;
     state = state.copyWith(loaded: true, settings: s);
     await _loadLastSync();
-    _schedule();
     autoSync();
   }
 
@@ -320,7 +313,10 @@ class SyncController extends Notifier<SyncUiState> {
     if (scope == null) return;
     final base = await ref.read(syncStateStoreProvider).load(scope);
     if (ref.mounted && base.lastSync != null) {
-      state = state.copyWith(lastSync: base.lastSync);
+      state = state.copyWith(
+        lastSync: base.lastSync,
+        changedPaths: Set.unmodifiable(base.lastChangedPaths),
+      );
     }
   }
 
@@ -445,7 +441,6 @@ class SyncController extends Notifier<SyncUiState> {
     }
     state = state.copyWith(clearMessage: true, settings: await _readSettings());
     await _loadLastSync();
-    _schedule();
     unawaited(syncNow(automatic: true));
   }
 
@@ -516,7 +511,6 @@ class SyncController extends Notifier<SyncUiState> {
     if (old.owner != owner || old.repo != repo) await _store.delete(_kPublic);
     state = state.copyWith(settings: await _readSettings(), clearMessage: true);
     await _loadLastSync();
-    _schedule();
     return null;
   }
 
@@ -535,11 +529,6 @@ class SyncController extends Notifier<SyncUiState> {
   Future<void> setMirrorDeletions(bool on) =>
       _flag(_kMirror, on, defaultOn: true);
 
-  Future<void> setInterval(int minutes) async {
-    if (!intervals.contains(minutes)) return;
-    await _store.write(_kInterval, '$minutes');
-    await _refreshSettings();
-  }
 
   /// Signs out, deletes tokens and settings and forgets sync history for
   /// this vault. Notes and the GitHub repository are not touched.
@@ -559,7 +548,6 @@ class SyncController extends Notifier<SyncUiState> {
     ]) {
       await _store.delete(k);
     }
-    _periodic?.cancel();
     state = SyncUiState(loaded: true, settings: await _readSettings());
   }
 
@@ -603,19 +591,9 @@ class SyncController extends Notifier<SyncUiState> {
         s.autoSync;
   }
 
-  void _schedule() {
-    _periodic?.cancel();
-    _periodic = null;
-    if (!_autoReady || !_foreground) return;
-    _periodic = Timer.periodic(
-      Duration(minutes: state.settings.intervalMinutes),
-      (_) => autoSync(),
-    );
-  }
 
-  /// The app came to the foreground (or started): sync and resume the timer.
+  /// The app came to the foreground (or started): check for remote changes.
   void appResumed() {
-    _foreground = true;
     _wakePoll();
     final st = state.settings;
     if (st.authMode == SyncAuthMode.github && !state.signingIn) {
@@ -636,28 +614,21 @@ class SyncController extends Notifier<SyncUiState> {
         Future.microtask(loadRepos);
       }
     }
-    _schedule();
     autoSync(minGap: const Duration(seconds: 20));
   }
 
-  /// The app went to the background: push pending edits, stop the timer.
+  /// The app went to the background. Local edits sync from their change event.
   void appPaused() {
-    _foreground = false;
-    _periodic?.cancel();
-    _periodic = null;
-    if (_debounce?.isActive ?? false) {
-      _debounce!.cancel();
-      autoSync();
-    } else {
-      autoSync(minGap: const Duration(seconds: 30));
-    }
+    final hadPendingEdit = _debounce?.isActive ?? false;
+    _debounce?.cancel();
+    if (hadPendingEdit) autoSync();
   }
 
-  /// A note was saved on this phone: sync a few seconds later (debounced).
+  /// A note changed: sync shortly after detection (debounced).
   void localChanged() {
     if (!_autoReady) return;
     _debounce?.cancel();
-    _debounce = Timer(const Duration(seconds: 6), autoSync);
+    _debounce = Timer(const Duration(seconds: 3), autoSync);
   }
 
   /// Runs a quiet sync if automatic sync is on.
@@ -726,12 +697,14 @@ class SyncController extends Notifier<SyncUiState> {
           }
         },
       );
+      if (report.ok) base.lastChangedPaths = Set.of(report.changedPaths);
       await store.save(scope, base);
       if (!ref.mounted) return report;
       state = state.copyWith(
         running: false,
         lastReport: report,
         lastSync: base.lastSync,
+        changedPaths: Set.unmodifiable(base.lastChangedPaths),
         message: report.fatal?.userMessage,
       );
       if (report.changedLocalFiles) {

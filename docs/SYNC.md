@@ -46,10 +46,12 @@ repository) if you prefer not to create a GitHub App.
 With **Sync automatically** on (default):
 
 - when the app opens and whenever you come back to it;
-- about 6 seconds after you save a note in Sapphire;
-- when you leave the app (pending edits are pushed);
-- every 1/2/5/15/30 minutes while the app is open (default 2), so changes an
-  AI pushed to GitHub appear while you use the app.
+- about 3 seconds after Sapphire detects a note change (debounced);
+- when you open the app or return to it, which also checks for remote GitHub changes.
+
+There is no repeating schedule. The setting can be switched off at any time;
+use **Sync now** when you want an immediate manual check. Notes changed by the
+latest successful sync are highlighted in mint in the graph.
 
 **Sync now** is always available. Android does not let Sapphire run while it
 is fully closed, so changes made on GitHub while the app is closed arrive the
