@@ -74,13 +74,10 @@ def main() -> None:
     write_adaptive_xml()
 
     # API 21–25 use the density-specific legacy PNGs; an anydpi vector would
-    # otherwise shadow them. The obsolete vector mark is no longer referenced.
-    for obsolete in (
-        RES / "mipmap-anydpi-v21/ic_launcher.xml",
-        RES / "drawable/ic_sapphire_mark.xml",
-    ):
-        if obsolete.exists():
-            obsolete.unlink()
+    # otherwise shadow them. Keep the separate vector used by the splash screen.
+    legacy_override = RES / "mipmap-anydpi-v21/ic_launcher.xml"
+    if legacy_override.exists():
+        legacy_override.unlink()
 
     store = Image.new("RGBA", (512, 512), BACKGROUND)
     store.alpha_composite(place_mark(512, 0.80))

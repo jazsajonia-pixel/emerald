@@ -48,7 +48,7 @@ void main() {
     await _graph(tester);
     expect(find.byType(GraphView), findsOneWidget);
     expect(find.text('4 notes · 2 links'), findsOneWidget);
-    expect(find.textContaining('Node colors show groups'), findsOneWidget);
+    expect(find.textContaining('Colors show groups'), findsOneWidget);
     expect(find.textContaining('violet dashes = inferred'), findsOneWidget);
   });
 

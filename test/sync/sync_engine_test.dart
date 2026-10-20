@@ -168,8 +168,8 @@ void main() {
     final r = await engine().run(base);
     expect(r.uploaded, 1);
     expect(r.downloaded, 1);
-    expect(r.changedPaths, contains('Only here.md'));
-    expect(r.changedPaths, contains('Projects/Only there.md'));
+    expect(r.changedPaths, contains('A.md'));
+    expect(r.changedPaths, contains('B.md'));
     expect(gh.text('A.md'), 'a2 from phone');
     expect(local('B.md'), 'b2 from github');
     expect(history.recorded, ['B.md=b1']);
