@@ -399,12 +399,12 @@ class _GraphScreenState extends ConsumerState<GraphScreen> {
             ),
           ],
         ),
-        body: _body(vault, idx),
+        body: _body(vault, idx, changedPaths),
       ),
     );
   }
 
-  Widget _body(VaultState vault, IndexState idx) {
+  Widget _body(VaultState vault, IndexState idx, Set<String> changedPaths) {
     if (vault is VaultLoading) {
       return const LoadingView(label: 'Opening vault…');
     }

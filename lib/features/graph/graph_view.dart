@@ -1211,7 +1211,7 @@ class _GraphPainter extends CustomPainter {
             ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8),
         );
       }
-      if (changed) {
+      if (s.widget.changedPaths.contains(node.path)) {
         canvas.drawCircle(
           c,
           r * 2.5,
