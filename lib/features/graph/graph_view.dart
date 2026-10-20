@@ -77,6 +77,7 @@ class GraphView extends StatefulWidget {
   final GraphLayout layout;
   final String query;
   final Set<String> pinnedPaths;
+
   /// Notes touched by the most recent successful sync.
   final Set<String> changedPaths;
 
@@ -257,7 +258,8 @@ class GraphViewState extends State<GraphView>
     final n = data.nodes.length;
     _n = n;
     _orbitCenterIndex = data.nodes.indexWhere(
-      (node) => node.path == 'Brain/00 - Home.md' || node.path == '00 - Home.md',
+      (node) =>
+          node.path == 'Brain/00 - Home.md' || node.path == '00 - Home.md',
     );
     if (_orbitCenterIndex == -1) _orbitCenterIndex = null;
     _x = Float64List(n);
@@ -880,8 +882,10 @@ class GraphViewState extends State<GraphView>
         if (_flat.target > 0.5) {
           // Track the finger directly: a full-width swipe is a full orbit.
           // Decaying velocity continues the gesture smoothly on release.
-          final yawDelta = delta.dx / math.max(1, _viewport!.width) * math.pi * 2;
-          final pitchDelta = -delta.dy / math.max(1, _viewport!.height) * math.pi;
+          final yawDelta =
+              delta.dx / math.max(1, _viewport!.width) * math.pi * 2;
+          final pitchDelta =
+              -delta.dy / math.max(1, _viewport!.height) * math.pi;
           _yaw += yawDelta;
           _pitch = (_pitch + pitchDelta).clamp(-1.35, 1.35);
           _yawVel = _yawVel * 0.42 + yawDelta / dtMs * 1000 * 0.58;
@@ -1160,8 +1164,14 @@ class _GraphPainter extends CustomPainter {
         final b = Offset(s._sx[edge.target], s._sy[edge.target]);
         final phase = (s._motionSeconds * 0.42 + e * 0.173) % 1.0;
         final point = Offset.lerp(a, b, phase)!;
-        final depthAlpha = 0.34 * (1 - (far(edge.source) + far(edge.target)) * 0.5);
-        canvas.drawCircle(point, 2.0 * zoom, Paint()..color = const Color(0xFF9CEBDE).withValues(alpha: depthAlpha));
+        final depthAlpha =
+            0.34 * (1 - (far(edge.source) + far(edge.target)) * 0.5);
+        canvas.drawCircle(
+          point,
+          2.0 * zoom,
+          Paint()
+            ..color = const Color(0xFF9CEBDE).withValues(alpha: depthAlpha),
+        );
       }
     }
     // ---- Nodes (back to front) ----

@@ -550,10 +550,17 @@ class _Legend extends StatelessWidget {
               runSpacing: 4,
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                Text('Colors show groups · mint marks the latest sync changes', style: small),
+                Text(
+                  'Colors show groups · mint marks the latest sync changes',
+                  style: small,
+                ),
                 Row(
                   mainAxisSize: MainAxisSize.min,
-                  children: [dot(const Color(0xFF69E6C1)), const SizedBox(width: 4), Text('Changed in latest sync', style: small)],
+                  children: [
+                    dot(const Color(0xFF69E6C1)),
+                    const SizedBox(width: 4),
+                    Text('Changed in latest sync', style: small),
+                  ],
                 ),
                 Row(
                   mainAxisSize: MainAxisSize.min,

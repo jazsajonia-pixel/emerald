@@ -218,7 +218,6 @@ class SyncController extends Notifier<SyncUiState> {
   static const _kAuto = 'sync.auto';
   static const _kMirror = 'sync.mirrorDeletions';
 
-
   SecretStore get _store => ref.read(secretStoreProvider);
 
   Timer? _debounce;
@@ -529,7 +528,6 @@ class SyncController extends Notifier<SyncUiState> {
   Future<void> setMirrorDeletions(bool on) =>
       _flag(_kMirror, on, defaultOn: true);
 
-
   /// Signs out, deletes tokens and settings and forgets sync history for
   /// this vault. Notes and the GitHub repository are not touched.
   Future<void> remove() async {
@@ -590,7 +588,6 @@ class SyncController extends Notifier<SyncUiState> {
         s.configured &&
         s.autoSync;
   }
-
 
   /// The app came to the foreground (or started): check for remote changes.
   void appResumed() {

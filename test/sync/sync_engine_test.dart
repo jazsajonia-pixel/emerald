@@ -332,9 +332,11 @@ void main() {
     final s = MemorySyncStateStore();
     await s.save(
       'x',
-      SyncBase({
-        'a.md': const SyncedFile(sha: 's', size: 1, lastModified: 2),
-      }, lastSync: now, lastChangedPaths: {'a.md', 'b.md'}),
+      SyncBase(
+        {'a.md': const SyncedFile(sha: 's', size: 1, lastModified: 2)},
+        lastSync: now,
+        lastChangedPaths: {'a.md', 'b.md'},
+      ),
     );
     final b = await s.load('x');
     expect(b.files['a.md']!.sha, 's');

@@ -86,14 +86,20 @@ void main() {
     expect(find.text('3D perspective · auto-rotating'), findsOneWidget);
   });
 
-  testWidgets('graph 3D drag follows the finger and orbits smoothly', (tester) async {
+  testWidgets('graph 3D drag follows the finger and orbits smoothly', (
+    tester,
+  ) async {
     await pumpSapphire(tester, storage: _storage());
     await _graph(tester);
-    final before = tester.state<GraphViewState>(find.byType(GraphView)).nodeOffset('Alpha.md')!;
+    final before = tester
+        .state<GraphViewState>(find.byType(GraphView))
+        .nodeOffset('Alpha.md')!;
     final canvas = find.byKey(GraphView.canvasKey);
     await tester.drag(canvas, const Offset(120, 10));
     await tester.pump(const Duration(milliseconds: 120));
-    final after = tester.state<GraphViewState>(find.byType(GraphView)).nodeOffset('Alpha.md')!;
+    final after = tester
+        .state<GraphViewState>(find.byType(GraphView))
+        .nodeOffset('Alpha.md')!;
     expect((after - before).distance, greaterThan(1));
     expect(tester.takeException(), isNull);
   });
