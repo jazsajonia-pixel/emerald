@@ -168,6 +168,8 @@ void main() {
     final r = await engine().run(base);
     expect(r.uploaded, 1);
     expect(r.downloaded, 1);
+    expect(r.changedPaths, contains('A.md'));
+    expect(r.changedPaths, contains('B.md'));
     expect(gh.text('A.md'), 'a2 from phone');
     expect(local('B.md'), 'b2 from github');
     expect(history.recorded, ['B.md=b1']);
@@ -330,13 +332,16 @@ void main() {
     final s = MemorySyncStateStore();
     await s.save(
       'x',
-      SyncBase({
-        'a.md': const SyncedFile(sha: 's', size: 1, lastModified: 2),
-      }, lastSync: now),
+      SyncBase(
+        {'a.md': const SyncedFile(sha: 's', size: 1, lastModified: 2)},
+        lastSync: now,
+        lastChangedPaths: {'a.md', 'b.md'},
+      ),
     );
     final b = await s.load('x');
     expect(b.files['a.md']!.sha, 's');
     expect(b.lastSync, now);
+    expect(b.lastChangedPaths, {'a.md', 'b.md'});
     expect((await s.load('other')).files, isEmpty);
   });
 }

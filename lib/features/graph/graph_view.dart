@@ -63,6 +63,7 @@ class GraphView extends StatefulWidget {
     required this.layout,
     this.query = '',
     this.pinnedPaths = const {},
+    this.changedPaths = const {},
     this.rotating = true,
     this.threeDimensional = true,
     this.cameraYaw = 0,
@@ -76,6 +77,9 @@ class GraphView extends StatefulWidget {
   final GraphLayout layout;
   final String query;
   final Set<String> pinnedPaths;
+
+  /// Notes touched by the most recent successful sync.
+  final Set<String> changedPaths;
 
   /// Slow auto-orbit in 3D while idle.
   final bool rotating;
@@ -132,6 +136,7 @@ class GraphViewState extends State<GraphView>
     with SingleTickerProviderStateMixin {
   // ---- Simulation state (world space, centred on 0) ----------------------
   int _n = 0;
+  int? _orbitCenterIndex;
   Float64List _x = Float64List(0), _y = Float64List(0), _z = Float64List(0);
   Float64List _vx = Float64List(0), _vy = Float64List(0), _vz = Float64List(0);
   List<List<int>> _adj = const [];
@@ -172,6 +177,7 @@ class GraphViewState extends State<GraphView>
   // ---- Frame bookkeeping ---------------------------------------------------
   late final Ticker _ticker = createTicker(_onTick);
   Duration _lastTick = Duration.zero;
+  double _motionSeconds = 0;
   final _frame = ValueNotifier<int>(0);
   final _labels = <int, TextPainter>{};
   final _labelsFocus = <int, TextPainter>{};
@@ -251,6 +257,11 @@ class GraphViewState extends State<GraphView>
   }) {
     final n = data.nodes.length;
     _n = n;
+    _orbitCenterIndex = data.nodes.indexWhere(
+      (node) =>
+          node.path == 'Brain/00 - Home.md' || node.path == '00 - Home.md',
+    );
+    if (_orbitCenterIndex == -1) _orbitCenterIndex = null;
     _x = Float64List(n);
     _y = Float64List(n);
     _z = Float64List(n);
@@ -560,6 +571,7 @@ class GraphViewState extends State<GraphView>
         ? 1 / 60
         : ((elapsed - _lastTick).inMicroseconds / 1e6).clamp(0.0, 0.05);
     _lastTick = elapsed;
+    _motionSeconds += dt;
     var active = false;
 
     // Simulation temperature: hot while dragging, cooling otherwise.
@@ -612,15 +624,19 @@ class GraphViewState extends State<GraphView>
     final cp = math.cos(pitch), sp = math.sin(pitch);
     final f = _focal;
     final ox = size.width / 2 + _pan.dx, oy = size.height / 2 + _pan.dy;
+    final pivot = _orbitCenterIndex;
+    final px = pivot == null ? 0.0 : _x[pivot];
+    final py = pivot == null ? 0.0 : _y[pivot];
+    final pz = pivot == null ? 0.0 : _z[pivot] * zf;
     for (var i = 0; i < _n; i++) {
-      final x = _x[i], y = _y[i], z = _z[i] * zf;
+      final x = _x[i] - px, y = _y[i] - py, z = _z[i] * zf - pz;
       final x1 = x * cy - z * sy;
       final z1 = x * sy + z * cy;
       final y2 = y * cp - z1 * sp;
       final z2 = y * sp + z1 * cp;
       final k = f / (f + math.max(z2, -f * 0.8));
-      _sx[i] = ox + x1 * k * _scale;
-      _sy[i] = oy + y2 * k * _scale;
+      _sx[i] = ox + (px + x1 * k) * _scale;
+      _sy[i] = oy + (py + y2 * k) * _scale;
       _sk[i] = k;
       _sd[i] = z2;
     }
@@ -637,8 +653,12 @@ class GraphViewState extends State<GraphView>
     final yaw = (_yaw + widget.cameraYaw) * zf;
     final pitch = (_pitch + widget.cameraTilt) * zf;
     final k = _sk[i] == 0 ? 1.0 : _sk[i];
-    final x1 = (p.dx - size.width / 2 - _pan.dx) / (k * _scale);
-    final y2 = (p.dy - size.height / 2 - _pan.dy) / (k * _scale);
+    final pivot = _orbitCenterIndex;
+    final px = pivot == null ? 0.0 : _x[pivot];
+    final py = pivot == null ? 0.0 : _y[pivot];
+    final pz = pivot == null ? 0.0 : _z[pivot] * zf;
+    final x1 = ((p.dx - size.width / 2 - _pan.dx) / _scale - px) / k;
+    final y2 = ((p.dy - size.height / 2 - _pan.dy) / _scale - py) / k;
     final z2 = _sd[i];
     final cp = math.cos(pitch), sp = math.sin(pitch);
     final y = y2 * cp + z2 * sp;
@@ -646,7 +666,7 @@ class GraphViewState extends State<GraphView>
     final cy = math.cos(yaw), sy = math.sin(yaw);
     final x = x1 * cy + z1 * sy;
     final z = -x1 * sy + z1 * cy;
-    return (x, y, zf > 0.05 ? z / zf : _z[i]);
+    return (x + px, y + py, zf > 0.05 ? (z + pz) / zf : _z[i]);
   }
 
   double _screenRadius(int i) {
@@ -860,12 +880,16 @@ class GraphViewState extends State<GraphView>
         final dtMs = math.max(1, (e.timeStamp - _lastMoveStamp).inMilliseconds);
         _lastMoveStamp = e.timeStamp;
         if (_flat.target > 0.5) {
-          final dy = delta.dx * 0.0085, dp = -delta.dy * 0.0085;
-          _yaw += dy;
-          _pitch = (_pitch + dp).clamp(-1.35, 1.35);
-          // Remember finger speed for inertia (rad/s).
-          _yawVel = _yawVel * 0.5 + dy / dtMs * 1000 * 0.5;
-          _pitchVel = _pitchVel * 0.5 + dp / dtMs * 1000 * 0.5;
+          // Track the finger directly: a full-width swipe is a full orbit.
+          // Decaying velocity continues the gesture smoothly on release.
+          final yawDelta =
+              delta.dx / math.max(1, _viewport!.width) * math.pi * 2;
+          final pitchDelta =
+              -delta.dy / math.max(1, _viewport!.height) * math.pi;
+          _yaw += yawDelta;
+          _pitch = (_pitch + pitchDelta).clamp(-1.35, 1.35);
+          _yawVel = _yawVel * 0.42 + yawDelta / dtMs * 1000 * 0.58;
+          _pitchVel = _pitchVel * 0.42 + pitchDelta / dtMs * 1000 * 0.58;
         } else {
           _pan += delta;
         }
@@ -1129,6 +1153,27 @@ class _GraphPainter extends CustomPainter {
       }
     }
 
+    // A quiet signal travels along a small sample of real links, like neural
+    // activity. It is based on existing edges and stays off with reduced motion.
+    if (s._autoOrbit && !s._reduceMotion && data.edges.isNotEmpty) {
+      final stride = math.max(1, (data.edges.length / 48).ceil());
+      for (var e = 0; e < data.edges.length; e += stride) {
+        final edge = data.edges[e];
+        if (edge.kind != EdgeKind.explicit) continue;
+        final a = Offset(s._sx[edge.source], s._sy[edge.source]);
+        final b = Offset(s._sx[edge.target], s._sy[edge.target]);
+        final phase = (s._motionSeconds * 0.42 + e * 0.173) % 1.0;
+        final point = Offset.lerp(a, b, phase)!;
+        final depthAlpha =
+            0.34 * (1 - (far(edge.source) + far(edge.target)) * 0.5);
+        canvas.drawCircle(
+          point,
+          2.0 * zoom,
+          Paint()
+            ..color = const Color(0xFF9CEBDE).withValues(alpha: depthAlpha),
+        );
+      }
+    }
     // ---- Nodes (back to front) ----
     final fill = Paint();
     final ring = Paint()..style = PaintingStyle.stroke;
@@ -1164,6 +1209,13 @@ class _GraphPainter extends CustomPainter {
           Paint()
             ..color = s._colors[i].withValues(alpha: 0.28 * fa)
             ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8),
+        );
+      }
+      if (s.widget.changedPaths.contains(node.path)) {
+        canvas.drawCircle(
+          c,
+          r * 2.5,
+          Paint()..color = const Color(0xFF69E6C1).withValues(alpha: 0.16),
         );
       }
       fill.color = color;

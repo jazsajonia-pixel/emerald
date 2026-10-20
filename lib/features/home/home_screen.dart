@@ -218,7 +218,7 @@ class _SyncCard extends StatelessWidget {
         const Color(0xFF5BE0B3),
         'Synced with ${s.repoName}',
         '${sync.lastSync == null ? 'Not synced yet' : 'Last sync ${_ago(sync.lastSync!)}'}'
-            '${s.autoSync ? ' · auto every ${s.intervalMinutes} min' : ' · manual'}',
+            '${s.autoSync ? ' · auto on detected changes' : ' · manual'}',
       ),
     };
     return Card(

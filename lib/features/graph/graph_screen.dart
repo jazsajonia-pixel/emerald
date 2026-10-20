@@ -10,6 +10,7 @@ import '../notes/note_navigation.dart';
 import '../search/index_controller.dart';
 import '../search/vault_index.dart';
 import '../vault/vault_controller.dart';
+import '../sync/sync_controller.dart';
 import '../../app/theme.dart';
 import 'graph_layout.dart';
 import 'graph_model.dart';
@@ -305,6 +306,9 @@ class _GraphScreenState extends ConsumerState<GraphScreen> {
   Widget build(BuildContext context) {
     final vault = ref.watch(vaultControllerProvider);
     final idx = ref.watch(indexControllerProvider);
+    final changedPaths = ref.watch(
+      syncControllerProvider.select((state) => state.changedPaths),
+    );
     final isLocal = _center != null;
     final title = isLocal ? 'Local: ${VaultPath.title(_center!)}' : 'Graph';
     return PopScope(
@@ -395,12 +399,12 @@ class _GraphScreenState extends ConsumerState<GraphScreen> {
             ),
           ],
         ),
-        body: _body(vault, idx),
+        body: _body(vault, idx, changedPaths),
       ),
     );
   }
 
-  Widget _body(VaultState vault, IndexState idx) {
+  Widget _body(VaultState vault, IndexState idx, Set<String> changedPaths) {
     if (vault is VaultLoading) {
       return const LoadingView(label: 'Opening vault…');
     }
@@ -465,6 +469,7 @@ class _GraphScreenState extends ConsumerState<GraphScreen> {
                   layout: layout,
                   query: _query.text,
                   pinnedPaths: _pinnedPaths,
+                  changedPaths: changedPaths,
                   rotating: _rotating,
                   threeDimensional: _threeDimensional,
                   cameraYaw: _cameraYaw,
@@ -545,7 +550,18 @@ class _Legend extends StatelessWidget {
               runSpacing: 4,
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                Text('Node colors show groups', style: small),
+                Text(
+                  'Colors show groups · mint marks the latest sync changes',
+                  style: small,
+                ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    dot(const Color(0xFF69E6C1)),
+                    const SizedBox(width: 4),
+                    Text('Changed in latest sync', style: small),
+                  ],
+                ),
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [

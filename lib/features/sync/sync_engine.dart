@@ -132,6 +132,7 @@ class SyncReport {
   int deletedRemote = 0;
   int unchanged = 0;
   final List<SyncConflict> conflicts = [];
+  final Set<String> changedPaths = {};
   final List<String> notices = [];
   final List<String> failures = [];
   SyncException? fatal;
@@ -350,6 +351,7 @@ class SyncEngine {
         );
         base.files.remove(a.path);
         report.deletedRemote++;
+        report.changedPaths.add(a.path);
       case SyncActionKind.upload:
         await _upload(a, entry!, base, report);
       case SyncActionKind.download:
@@ -385,6 +387,7 @@ class SyncEngine {
       lastModified: c.stamp.lastModified,
     );
     report.uploaded++;
+    report.changedPaths.add(a.path);
   }
 
   /// Forces the next sync to re-read [path] instead of trusting its stat.
@@ -433,6 +436,7 @@ class SyncEngine {
           '${a.path}: saved as ${created.path} (name was taken)',
         );
         report.downloaded++;
+        report.changedPaths.add(created.path);
         return;
       }
       stamp = created.stamp;
@@ -444,6 +448,7 @@ class SyncEngine {
       lastModified: stamp.lastModified,
     );
     report.downloaded++;
+    report.changedPaths.add(a.path);
   }
 
   Future<void> _deleteLocal(
@@ -465,6 +470,7 @@ class SyncEngine {
     );
     base.files.remove(a.path);
     report.deletedLocal++;
+    report.changedPaths.add(a.path);
   }
 
   Future<void> _conflict(
@@ -497,6 +503,7 @@ class SyncEngine {
           lastModified: 0,
         );
         report.conflicts.add(SyncConflict(a.path, created.path));
+        report.changedPaths.add(created.path);
         return;
       } on VaultException catch (e) {
         if (e.code != VaultErrorCode.alreadyExists) rethrow;

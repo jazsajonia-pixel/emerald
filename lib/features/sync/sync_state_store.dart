@@ -38,9 +38,11 @@ class SyncedFile {
 }
 
 class SyncBase {
-  SyncBase(this.files, {this.lastSync});
+  SyncBase(this.files, {this.lastSync, Set<String>? lastChangedPaths})
+    : lastChangedPaths = lastChangedPaths ?? <String>{};
   final Map<String, SyncedFile> files;
   DateTime? lastSync;
+  Set<String> lastChangedPaths;
 
   static SyncBase empty() => SyncBase({});
 }
@@ -59,10 +61,15 @@ class MemorySyncStateStore implements SyncStateStore {
   Future<SyncBase> load(String scope) async => SyncBase(
     Map.of(data[scope]?.files ?? const {}),
     lastSync: data[scope]?.lastSync,
+    lastChangedPaths: Set.of(data[scope]?.lastChangedPaths ?? const {}),
   );
   @override
   Future<void> save(String scope, SyncBase base) async =>
-      data[scope] = SyncBase(Map.of(base.files), lastSync: base.lastSync);
+      data[scope] = SyncBase(
+        Map.of(base.files),
+        lastSync: base.lastSync,
+        lastChangedPaths: Set.of(base.lastChangedPaths),
+      );
   @override
   Future<void> clear(String scope) async => data.remove(scope);
 }
@@ -99,6 +106,11 @@ class FileSyncStateStore implements SyncStateStore {
       return SyncBase(
         files,
         lastSync: last is String ? DateTime.tryParse(last) : null,
+        lastChangedPaths: {
+          if (j['lastChangedPaths'] is List)
+            for (final p in j['lastChangedPaths'] as List)
+              if (p is String) p,
+        },
       );
     } on FormatException {
       // A damaged state file only makes the next sync more conservative.
@@ -114,6 +126,7 @@ class FileSyncStateStore implements SyncStateStore {
       jsonEncode({
         'files': {for (final e in base.files.entries) e.key: e.value.toJson()},
         'lastSync': base.lastSync?.toUtc().toIso8601String(),
+        'lastChangedPaths': base.lastChangedPaths.toList()..sort(),
       }),
       flush: true,
     );

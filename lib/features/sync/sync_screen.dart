@@ -274,35 +274,12 @@ class _SyncScreenState extends ConsumerState<SyncScreen> {
                         key: const Key('sync-auto'),
                         title: const Text('Sync automatically'),
                         subtitle: const Text(
-                          'When the app opens, when you come back to it, a few '
-                          'seconds after you edit, when you leave, and on a '
-                          'timer while it is open.',
+                          'Checks when the app opens or returns, and shortly '
+                          'after Sapphire detects a note change. No background timer.',
                         ),
                         value: st.autoSync,
                         onChanged: ctrl.setAutoSync,
                       ),
-                      if (st.autoSync)
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                          child: Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            crossAxisAlignment: WrapCrossAlignment.center,
-                            children: [
-                              Text(
-                                'Check GitHub every',
-                                style: theme.textTheme.bodyMedium,
-                              ),
-                              for (final m in SyncController.intervals)
-                                ChoiceChip(
-                                  key: Key('sync-interval-$m'),
-                                  label: Text('$m min'),
-                                  selected: st.intervalMinutes == m,
-                                  onSelected: (_) => ctrl.setInterval(m),
-                                ),
-                            ],
-                          ),
-                        ),
                       SwitchListTile(
                         key: const Key('sync-mirror'),
                         title: const Text('Mirror deletions'),

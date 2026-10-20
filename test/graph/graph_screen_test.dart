@@ -48,7 +48,7 @@ void main() {
     await _graph(tester);
     expect(find.byType(GraphView), findsOneWidget);
     expect(find.text('4 notes · 2 links'), findsOneWidget);
-    expect(find.textContaining('Node colors show groups'), findsOneWidget);
+    expect(find.textContaining('Colors show groups'), findsOneWidget);
     expect(find.textContaining('violet dashes = inferred'), findsOneWidget);
   });
 
@@ -86,6 +86,23 @@ void main() {
     expect(find.text('3D perspective · auto-rotating'), findsOneWidget);
   });
 
+  testWidgets('graph 3D drag follows the finger and orbits smoothly', (
+    tester,
+  ) async {
+    await pumpSapphire(tester, storage: _storage());
+    await _graph(tester);
+    final before = tester
+        .state<GraphViewState>(find.byType(GraphView))
+        .nodeOffset('Alpha.md')!;
+    final canvas = find.byKey(GraphView.canvasKey);
+    await tester.drag(canvas, const Offset(120, 10));
+    await tester.pump(const Duration(milliseconds: 120));
+    final after = tester
+        .state<GraphViewState>(find.byType(GraphView))
+        .nodeOffset('Alpha.md')!;
+    expect((after - before).distance, greaterThan(1));
+    expect(tester.takeException(), isNull);
+  });
   testWidgets('camera controls adjust orbit, tilt, zoom, and reset', (
     tester,
   ) async {
